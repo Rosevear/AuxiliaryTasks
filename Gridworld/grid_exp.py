@@ -20,7 +20,7 @@ import random
 import numpy as np
 import pickle
 import matplotlib as mpl
-mpl.use('TkAgg')
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 50
+    num_episodes = 1
     max_steps = 1000
     num_runs = 1
 

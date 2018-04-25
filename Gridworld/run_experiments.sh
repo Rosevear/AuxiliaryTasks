@@ -9,3 +9,4 @@ python grid_exp.py --stochastic -name "strong stochastic rich gridworld final"
 echo "Running auxiliary experiments for stochastic gridworld with sparse rewards..."
 python grid_exp.py --stochastic --sparse -name "strong stochastic sparse gridworld final"
 echo "All experiments completed!"
+mv *.png Results
