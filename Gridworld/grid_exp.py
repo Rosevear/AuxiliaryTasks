@@ -66,9 +66,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 50
     max_steps = 1000
-    num_runs = 1
+    num_runs = 50
 
     #The main experiment loop
     print("Training the agents...")
