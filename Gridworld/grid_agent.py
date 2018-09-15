@@ -141,6 +141,9 @@ def agent_init():
         rms = RMSprop(lr=ALPHA)
         model = Model(inputs=[main_input, aux_input], outputs=[main_output, aux_output])
         model.compile(optimizer=rms, loss=loss)
+        plot_model(model, to_file='{} agent model.png'.format(AGENT), show_shapes=True)
+        print('model summary for agent type: {}'.format(AGENT))
+        print(model.summary())
 
 
 def agent_start(state):
