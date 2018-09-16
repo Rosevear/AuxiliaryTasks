@@ -16,15 +16,23 @@ from time import sleep
 import argparse
 import json
 import random
-
-import numpy as np
 import pickle
+import numpy as np
+
 import matplotlib as mpl
-mpl.use('Agg')
+mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
+#plt.switch_backend('agg')
+
+
+
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
+#AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
+AGENTS = ['random', 'tabularQ', 'neural']
 VALID_MOVE_SETS = [4, 8, 9]
 
 if __name__ == "__main__":
@@ -68,7 +76,7 @@ if __name__ == "__main__":
 
     num_episodes = 50
     max_steps = 1000
-    num_runs = 50
+    num_runs = 1
 
     #The main experiment loop
     print("Training the agents...")

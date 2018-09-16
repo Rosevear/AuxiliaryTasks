@@ -1,4 +1,7 @@
-#PyGame gitignore 
+#Gridworld
+*.png
+
+#PyGame gitignore
 /docs/_build
 /docs/_templates
 *.pyc
@@ -44,4 +47,3 @@ xcuserdata/**
 *.iml
 local.properties
 gradleBuild
-

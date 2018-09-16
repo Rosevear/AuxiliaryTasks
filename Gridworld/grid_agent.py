@@ -13,6 +13,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Input, concatenate
 from keras.initializers import he_normal
 from keras.optimizers import RMSprop
+from keras.utils import plot_model
 
 from rl_glue import RL_num_episodes, RL_num_steps
 
