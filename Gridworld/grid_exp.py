@@ -18,16 +18,15 @@ import json
 import random
 import pickle
 import numpy as np
+import platform
+
 
 import matplotlib as mpl
-mpl.use('TkAgg')
+if platform.system() == 'Darwin':
+    mpl.use('TkAgg')
+else:
+    mpl.use('Agg')
 import matplotlib.pyplot as plt
-
-#import matplotlib
-#matplotlib.use('Agg')
-#import matplotlib.pyplot as plt
-#plt.switch_backend('agg')
-
 
 
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
