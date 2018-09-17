@@ -137,14 +137,19 @@ def agent_init():
         merged = concatenate([aux_input, shared_2])
 
         aux_1 = Dense(128, activation='relu', kernel_initializer=init_weights)(merged)
-
         aux_output = Dense(num_outputs, activation=cur_activation, kernel_initializer=init_weights, name='aux_output')(aux_1)
+
+        #Initialize the model
         rms = RMSprop(lr=ALPHA)
+        loss_weights = {'main_output': 1.0, 'aux_output': 0.5}
         model = Model(inputs=[main_input, aux_input], outputs=[main_output, aux_output])
-        model.compile(optimizer=rms, loss=loss)
+        model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
+
+        #Save a visual and textual summary of the model
         plot_model(model, to_file='{} agent model.png'.format(AGENT), show_shapes=True)
-        print('model summary for agent type: {}'.format(AGENT))
-        print(model.summary())
+        with open('{} agent model.txt'.format(AGENT), 'w') as model_summary_file:
+            # Pass the file handle in as a lambda function to make it callable
+            model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
 
 
 def agent_start(state):

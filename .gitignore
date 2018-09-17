@@ -1,5 +1,6 @@
 #Gridworld
 *.png
+*.txt
 
 #PyGame gitignore
 /docs/_build

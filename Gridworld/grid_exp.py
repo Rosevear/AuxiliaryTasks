@@ -6,7 +6,9 @@
   Purpose: Implementation of the interaction between the Gambler's problem environment
   and the Monte Carlon agent using RL_glue.
   For use in the Reinforcement Learning course, Fall 2017, University of Alberta
-  Modified by Cody Rosevear for use in CMPUT659, Winter 2018, University of Alberta
+
+  Modified by Cody Rosevear for use in CMPUT659, Winter 2018
+  and CMPUT701, Fall 2018, University of Alberta
 """
 
 from __future__ import division
@@ -20,7 +22,6 @@ import pickle
 import numpy as np
 import platform
 
-
 import matplotlib as mpl
 if platform.system() == 'Darwin':
     mpl.use('TkAgg')
@@ -30,16 +31,16 @@ import matplotlib.pyplot as plt
 
 
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-#AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
-AGENTS = ['random', 'tabularQ', 'neural']
+AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
+#AGENTS = ['random', 'tabularQ', 'neural']
 VALID_MOVE_SETS = [4, 8, 9]
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
-    parser.add_argument('-e', nargs='?', type=float, default=0.1, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.1 This represents the minimum value epislon will decay to, since it initially starts at 1')
+    parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
-    parser.add_argument('-g', nargs='?', type=float, default=0.9, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 1.0')
+    parser.add_argument('-g', nargs='?', type=float, default=1, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 1.0')
     parser.add_argument('-n', nargs='?', type=int, default=3, help='The number of states to use in the auxiliary prediction tasks. Default n = 3')
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
     parser.add_argument('--windy', action='store_true', help='Specify whether to use a single step or multistep agent.')
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 50
+    num_episodes = 1
     max_steps = 1000
     num_runs = 1
 

@@ -47,12 +47,11 @@ def env_step(action):
     cur_column = current_state[1]
 
     """
-    If we are in an obstacle state with a stochastic envrionment, the effect of
+    If we are in an obstacle state with a stochastic environment, the effect of
     an action is random, so we resample an action uniformly at random to introduce
-    stochasticity to the current statefrom the point of view of the agent
+    stochasticity to the current state from the point of view of the agent
     """
     if IS_STOCHASTIC and current_state in OBSTACLE_STATES:
-        #action = rand_in_range(len(ACTION_SET))
         action = np.random.choice(ACTION_SET, 1, p=[0.10, 0.10, 0.40, 0.40])
 
     #Change the state based on the agent action
