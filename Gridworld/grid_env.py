@@ -4,97 +4,77 @@ from __future__ import division
 from utils import rand_norm, rand_in_range, rand_un
 import numpy as np
 import json
-
-current_state = None
-IS_SPARSE = None
-IS_STOCHASTIC = None
-
-NORTH = 0
-EAST = 1
-SOUTH = 2
-WEST = 3
-
-ACTION_SET = [NORTH, EAST, SOUTH, WEST]
-
-MAX_ROW = 5
-MAX_COLUMN = 8
-MIN_ROW = 0
-MIN_COLUMN = 0
-
-START_STATE = [3, 0]
-GOAL_STATE = [5, 8]
-OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
+import grid_env_globals as e_globs
 
 def env_init():
     return
 
 def env_start():
-    global current_state
-    current_state = START_STATE
-    return current_state
+    e_globs.current_state
+    e_globs.current_state = e_globs.START_STATE
+    return e_globs.current_state
 
 def env_step(action):
-    global current_state, IS_SPARSE
 
-    if not action in ACTION_SET:
+    if not action in e_globs.ACTION_SET:
         print "Invalid action taken!!"
         print "action : ", action
-        print "current_state : ", current_state
+        print "e_globs.current_state : ", e_globs.current_state
         exit(1)
 
-    old_state = current_state
-    cur_row = current_state[0]
-    cur_column = current_state[1]
+    old_state = e_globs.current_state
+    cur_row = e_globs.current_state[0]
+    cur_column = e_globs.current_state[1]
 
     """
     If we are in an obstacle state with a stochastic environment, the effect of
     an action is random, so we resample an action uniformly at random to introduce
     stochasticity to the current state from the point of view of the agent
     """
-    if IS_STOCHASTIC and current_state in OBSTACLE_STATES:
-        action = np.random.choice(ACTION_SET, 1, p=[0.10, 0.10, 0.40, 0.40])
+    if e_globs.IS_STOCHASTIC and e_globs.current_state in e_globs.OBSTACLE_STATES:
+        action = np.random.choice(e_globs.ACTION_SET, 1, p=[0.10, 0.10, 0.40, 0.40])
 
     #Change the state based on the agent action
-    if action == NORTH:
-        current_state = [cur_row + 1, cur_column]
-    elif action == EAST:
-        current_state = [cur_row, cur_column + 1]
-    elif action == SOUTH:
-        current_state = [cur_row - 1, cur_column]
-    elif action == WEST:
-        current_state = [cur_row, cur_column - 1]
+    if action == e_globs.NORTH:
+        e_globs.current_state = [cur_row + 1, cur_column]
+    elif action == e_globs.EAST:
+        e_globs.current_state = [cur_row, cur_column + 1]
+    elif action == e_globs.SOUTH:
+        e_globs.current_state = [cur_row - 1, cur_column]
+    elif action == e_globs.WEST:
+        e_globs.current_state = [cur_row, cur_column - 1]
 
     #Enforce the constraint that actions do not leave the grid world
-    if current_state[0] > MAX_ROW:
-        current_state[0] = MAX_ROW
-    elif current_state[0] < MIN_ROW:
-        current_state[0] = MIN_ROW
+    if e_globs.current_state[0] > e_globs.MAX_ROW:
+        e_globs.current_state[0] = e_globs.MAX_ROW
+    elif e_globs.current_state[0] < e_globs.MIN_ROW:
+        e_globs.current_state[0] = e_globs.MIN_ROW
 
-    if current_state[1] > MAX_COLUMN:
-        current_state[1] = MAX_COLUMN
-    elif current_state[1] < MIN_COLUMN:
-        current_state[1] = MIN_COLUMN
+    if e_globs.current_state[1] > e_globs.MAX_COLUMN:
+        e_globs.current_state[1] = e_globs.MAX_COLUMN
+    elif e_globs.current_state[1] < e_globs.MIN_COLUMN:
+        e_globs.current_state[1] = e_globs.MIN_COLUMN
 
     #Enforce the constraint that some squares are out of bounds, so we go nowhere if we try to step into them
-    if not IS_STOCHASTIC and current_state in OBSTACLE_STATES:
-        current_state = old_state
+    if not e_globs.IS_STOCHASTIC and e_globs.current_state in e_globs.OBSTACLE_STATES:
+        e_globs.current_state = old_state
 
-    if IS_SPARSE:
-        if current_state == GOAL_STATE:
+    if e_globs.IS_SPARSE:
+        if e_globs.current_state == e_globs.GOAL_STATE:
             is_terminal = True
             reward = 1
         else:
             is_terminal = False
             reward = 0
     else:
-        if current_state == GOAL_STATE:
+        if e_globs.current_state == e_globs.GOAL_STATE:
             is_terminal = True
             reward = 0
         else:
             is_terminal = False
             reward = -1
 
-    result = {"reward": reward, "state": current_state, "isTerminal": is_terminal}
+    result = {"reward": reward, "state": e_globs.current_state, "isTerminal": is_terminal}
 
     return result
 
@@ -102,7 +82,6 @@ def env_cleanup():
     return
 
 def env_message(in_message):
-    global IS_SPARSE, IS_STOCHASTIC
     """
     Arguments
     ---------
@@ -114,6 +93,6 @@ def env_message(in_message):
     string : the response to the message
     """
     params = json.loads(in_message)
-    IS_SPARSE = params['IS_SPARSE']
-    IS_STOCHASTIC = params['IS_STOCHASTIC']
+    e_globs.IS_SPARSE = params['IS_SPARSE']
+    e_globs.IS_STOCHASTIC = params['IS_STOCHASTIC']
     return
