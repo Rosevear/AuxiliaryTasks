@@ -18,7 +18,10 @@ from keras.utils import plot_model
 from rl_glue import RL_num_episodes, RL_num_steps
 
 import matplotlib as mpl
-mpl.use('TkAgg')
+if platform.system() == 'Darwin':
+    mpl.use('TkAgg')
+else:
+    mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 NUM_ROWS = 6
