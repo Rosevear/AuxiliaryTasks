@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import random
 import json
+import platform
 
 from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Input, concatenate
