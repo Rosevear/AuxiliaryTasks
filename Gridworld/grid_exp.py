@@ -74,9 +74,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 50
     max_steps = 1000
-    num_runs = 1
+    num_runs = 50
 
     #The main experiment loop
     print("Training the agents...")
@@ -115,10 +115,12 @@ if __name__ == "__main__":
     plt.ylabel('Steps per episode')
     plt.xlabel("Episode")
     plt.axis([0, num_episodes, 0, max_steps + 1000])
+
     for i in range(len(avg_results)):
         cur_data = [episode for episode in range(num_episodes)]
         plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, ALPHA, GAMMA, N, AGENTS[i]))
     plt.legend(loc='center', bbox_to_anchor=(0.50,0.90))
+
     if RESULTS_FILE_NAME:
         print("Saving the results...")
         plt.savefig("{}.png".format(RESULTS_FILE_NAME), format="png")
