@@ -21,6 +21,7 @@ import random
 import pickle
 import numpy as np
 import platform
+from itertools import product
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
     parser.add_argument('-name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
+    parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
 
     args = parser.parse_args()
 
@@ -65,10 +67,16 @@ if __name__ == "__main__":
 
 
     #Agent and environment parameters, and experiment settings
+    if args.sweep:
+        alpha_params = [0.1, 0.01, 0.001]
+        replay_buffer_sizes =  [1, 10, 50]
+
+    else:
+        alpha_params = [args.a]
+        replay_buffer_sizes = [args.n]
+
     EPSILON = args.e
-    ALPHA = args.a
     GAMMA = args.g
-    N = args.n
     IS_STOCHASTIC = args.stochastic
     NUM_ACTIONS = args.actions
     IS_SPARSE = args.sparse
@@ -79,18 +87,20 @@ if __name__ == "__main__":
     num_runs = 1
 
     #The main experiment loop
-    print("Training the agents...")
+    all_params = product(AGENTS, alpha_params, replay_buffer_sizes)
     all_results = []
-    for agent in AGENTS:
-        print("Training agent: {}".format(agent))
-        cur_agent_results = []
+    all_param_settings = []
+    print("Starting the experiment...")
+    for param_setting in all_params:
+        print("Training agent: {} with alpha = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[2]))
+        cur_param_results = []
         for run in range(num_runs):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
             np.random.seed(run)
             random.seed(run)
 
             #Send the agent and environment parameters to use for the current run
-            agent_params = {"EPSILON": EPSILON, "ALPHA": ALPHA, "GAMMA": GAMMA, "AGENT": agent, "N": N, "IS_STOCHASTIC": IS_STOCHASTIC}
+            agent_params = {"EPSILON": EPSILON, "ALPHA": param_setting[1], "GAMMA": GAMMA, "AGENT": param_setting[0], "N": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
             enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
             RL_agent_message(json.dumps(agent_params))
             RL_env_message(json.dumps(enviro_params))
@@ -103,8 +113,9 @@ if __name__ == "__main__":
                 RL_episode(max_steps)
                 run_results.append(RL_num_steps())
                 RL_cleanup()
-            cur_agent_results.append(run_results)
-        all_results.append(cur_agent_results)
+            cur_param_results.append(run_results)
+        all_results.append(cur_param_results)
+        all_param_settings.append(param_setting)
 
     #Average the results for each parameter setting over all of the runs
     avg_results = []
@@ -118,7 +129,7 @@ if __name__ == "__main__":
 
     for i in range(len(avg_results)):
         cur_data = [episode for episode in range(num_episodes)]
-        plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, ALPHA, GAMMA, N, AGENTS[i]))
+        plt.plot(cur_data, avg_results[i], 'c', label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), GAMMA, str(all_param_settings[i][2]), all_param_settings[i][0]))
     plt.legend(loc='center', bbox_to_anchor=(0.50,0.90))
 
     if RESULTS_FILE_NAME:
