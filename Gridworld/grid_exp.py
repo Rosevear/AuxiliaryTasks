@@ -22,6 +22,7 @@ import pickle
 import numpy as np
 import platform
 from itertools import product
+from collections import namedtuple
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -32,9 +33,28 @@ import matplotlib.pyplot as plt
 
 
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
+#AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
 #AGENTS = ['random', 'tabularQ', 'neural']
+AGENTS = ['random']
 VALID_MOVE_SETS = [4, 8, 9]
+
+def do_plotting(suffix=0):
+    if RESULTS_FILE_NAME:
+        print("Saving the results...")
+        if suffix:
+            plt.savefig("{}.png".format(RESULTS_FILE_NAME + str(suffix)), format="png")
+        else:
+            plt.savefig("{}.png".format(RESULTS_FILE_NAME), format="png")
+    else:
+        print("Displaying the results...")
+        plt.show()
+
+def setup_plot():
+    print("Plotting the results...")
+    plt.ylabel('Steps per episode')
+    plt.xlabel("Episode")
+    plt.axis([0, num_episodes, 0, max_steps + 1000])
+    plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
 
 if __name__ == "__main__":
 
@@ -47,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument('--windy', action='store_true', help='Specify whether to use a single step or multistep agent.')
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
-    parser.add_argument('-name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
+    parser.add_argument('--name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
 
     args = parser.parse_args()
@@ -68,31 +88,34 @@ if __name__ == "__main__":
 
     #Agent and environment parameters, and experiment settings
     if args.sweep:
+        IS_SWEEP = True
         alpha_params = [0.1, 0.01, 0.001]
         replay_buffer_sizes =  [1, 10, 50]
+        gamma_params = GAMMA = [0, 0.95, 1]
 
     else:
+        IS_SWEEP = False
         alpha_params = [args.a]
         replay_buffer_sizes = [args.n]
+        gamma_params = [args.g]
 
     EPSILON = args.e
-    GAMMA = args.g
     IS_STOCHASTIC = args.stochastic
     NUM_ACTIONS = args.actions
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 10
     max_steps = 1000
     num_runs = 1
 
     #The main experiment loop
-    all_params = product(AGENTS, alpha_params, replay_buffer_sizes)
+    all_params = product(AGENTS, alpha_params, replay_buffer_sizes, gamma_params)
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
     for param_setting in all_params:
-        print("Training agent: {} with alpha = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[2]))
+        print("Training agent: {} with alpha = {} , gamma = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[3], param_setting[2]))
         cur_param_results = []
         for run in range(num_runs):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
@@ -100,7 +123,7 @@ if __name__ == "__main__":
             random.seed(run)
 
             #Send the agent and environment parameters to use for the current run
-            agent_params = {"EPSILON": EPSILON, "ALPHA": param_setting[1], "GAMMA": GAMMA, "AGENT": param_setting[0], "N": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
+            agent_params = {"EPSILON": EPSILON, "ALPHA": param_setting[1], "GAMMA": param_setting[3], "AGENT": param_setting[0], "N": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
             enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
             RL_agent_message(json.dumps(agent_params))
             RL_env_message(json.dumps(enviro_params))
@@ -117,25 +140,65 @@ if __name__ == "__main__":
         all_results.append(cur_param_results)
         all_param_settings.append(param_setting)
 
-    #Average the results for each parameter setting over all of the runs
-    avg_results = []
-    for i in range(len(all_results)):
-        avg_results.append([np.mean(run) for run in zip(*all_results[i])])
+    #Process and plot the results
+    if IS_SWEEP:
+        #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
+        all_params_no_agent = product(alpha_params, replay_buffer_sizes, gamma_params)
+        param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
+        best_agent_results = {}
+        avg_results = []
+        for i in range(len(all_results)):
+            cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            avg_results.append(cur_data)
 
-    print("Plotting the results...")
-    plt.ylabel('Steps per episode')
-    plt.xlabel("Episode")
-    plt.axis([0, num_episodes, 0, max_steps + 1000])
+            #Group results by the best performing parameter setting for each agent
+            cur_agent = all_param_settings[i][0]
+            cur_overall_average = np.mean(cur_data)#NOTE: This is the average time spent getting to the goal across all runs for all episodes, for that agent, to give it a final overall score with which to compare it to other agents
+            if cur_agent not in best_agent_results or cur_overall_average < best_agent_results[cur_agent].average:
+                agent_data = namedtuple("agent_data_tuple", ["data", "average", "params"])
+                agent_data.average = cur_overall_average
+                agent_data.data = cur_data
+                agent_data.params = all_param_settings[i]
+                best_agent_results[cur_agent] = agent_data
 
-    for i in range(len(avg_results)):
-        cur_data = [episode for episode in range(num_episodes)]
-        plt.plot(cur_data, avg_results[i], 'c', label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), GAMMA, str(all_param_settings[i][2]), all_param_settings[i][0]))
-    plt.legend(loc='center', bbox_to_anchor=(0.50,0.90))
+            #Group by each parameter setting to compare agent's across specific parameter settings
+            cur_param_setting = tuple(all_param_settings[i][1:])
+            param_setting_results[cur_param_setting][cur_agent] = cur_data
 
-    if RESULTS_FILE_NAME:
-        print("Saving the results...")
-        plt.savefig("{}.png".format(RESULTS_FILE_NAME), format="png")
+        #Create a table to show the best parameters for each agent
+        setup_plot()
+        i = 0
+        for agent in best_agent_results.keys():
+            episodes = [episode for episode in range(num_episodes)]
+            plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[2]), best_agent_results[agent].params[0]))
+            i += 1
+        do_plotting()
+
+        #Create a table for each parameter setting, showing all agents per setting
+        file_name_suffix = 1
+        for param_setting in param_setting_results:
+            plt.clf()
+            setup_plot()
+            cur_param_setting_result = param_setting_results[param_setting]
+            i = 0
+            for agent in cur_param_setting_result.keys():
+                episodes = [episode for episode in range(num_episodes)]
+                plt.plot(episodes, cur_param_setting_result[agent], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(param_setting[0]), str(param_setting[2]), str(param_setting[1]), agent))
+                i += 1
+            do_plotting(file_name_suffix)
+            file_name_suffix += 1
+
     else:
-        print("Displaying the results...")
-        plt.show()
+        #Average the results for each parameter setting over all of the runs
+        avg_results = []
+        for i in range(len(all_results)):
+            avg_results.append([np.mean(run) for run in zip(*all_results[i])])
+
+        setup_plot()
+
+        for i in range(len(avg_results)):
+            cur_data = [episode for episode in range(num_episodes)]
+            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), GAMMA, str(all_param_settings[i][2]), all_param_settings[i][0]))
+        do_plotting()
+
     print("Experiment completed!")
