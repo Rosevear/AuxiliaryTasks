@@ -361,7 +361,8 @@ def agent_message(in_message):
     ALPHA = params['ALPHA']
     GAMMA = params['GAMMA']
     AGENT = params['AGENT']
-    N = params['N']
+    if 'N' in params:
+        N = params['N']
     IS_STOCHASTIC = params['IS_STOCHASTIC']
     return
 
@@ -455,7 +456,7 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
                 add_to_buffer(deterministic_state_buffer, cur_transition, deterministic_state_buffer_count)
                 deterministic_state_buffer_count += 1
                 if deterministic_state_buffer_count == BUFFER_SIZE:
-                    deterministic_state_buffer_coount = 0
+                    deterministic_state_buffer_count = 0
         else:
             if reward == 0:
                 add_to_buffer(zero_reward_buffer, cur_transition, zero_buffer_count)

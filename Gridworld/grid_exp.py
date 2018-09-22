@@ -32,8 +32,10 @@ else:
 import matplotlib.pyplot as plt
 
 
+#TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
+
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-#AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
+AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 AGENTS = ['random', 'tabularQ', 'neural']
 #AGENTS = ['random']
 VALID_MOVE_SETS = [4, 8, 9]
@@ -55,6 +57,12 @@ def setup_plot():
     plt.xlabel("Episode")
     plt.axis([0, num_episodes, 0, max_steps + 1000])
     plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+
+#Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
+def merge_two_dicts(x, y):
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z
 
 if __name__ == "__main__":
 
@@ -89,15 +97,15 @@ if __name__ == "__main__":
     #Agent and environment parameters, and experiment settings
     if args.sweep:
         IS_SWEEP = True
-        alpha_params = [0.1, 0.01, 0.001]
-        replay_buffer_sizes =  [1, 10, 50]
-        gamma_params = GAMMA = [0, 0.95, 1]
+        alpha_params = [0.1, 0.01]
+        gamma_params = GAMMA = [0, 0.95]
+        replay_buffer_sizes =  [1, 10]
 
     else:
         IS_SWEEP = False
         alpha_params = [args.a]
-        replay_buffer_sizes = [args.n]
         gamma_params = [args.g]
+        replay_buffer_sizes = [args.n]
 
     EPSILON = args.e
     IS_STOCHASTIC = args.stochastic
@@ -105,17 +113,22 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 10
+    num_episodes = 1
     max_steps = 1000
     num_runs = 1
 
     #The main experiment loop
-    all_params = product(AGENTS, alpha_params, replay_buffer_sizes, gamma_params)
+    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_buffer_sizes))
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
     for param_setting in all_params:
-        print("Training agent: {} with alpha = {} , gamma = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[3], param_setting[2]))
+        cur_agent = param_setting[0]
+        if cur_agent in AUX_AGENTS:
+            print("Training agent: {} with alpha = {} gamma = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3]))
+        else:
+            print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
+
         cur_param_results = []
         for run in range(num_runs):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
@@ -123,7 +136,10 @@ if __name__ == "__main__":
             random.seed(run)
 
             #Send the agent and environment parameters to use for the current run
-            agent_params = {"EPSILON": EPSILON, "ALPHA": param_setting[1], "GAMMA": param_setting[3], "AGENT": param_setting[0], "N": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
+            if cur_agent in AUX_AGENTS:
+                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC}
+            else:
+                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
             enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
             RL_agent_message(json.dumps(agent_params))
             RL_env_message(json.dumps(enviro_params))
@@ -143,7 +159,7 @@ if __name__ == "__main__":
     #Process and plot the results
     if IS_SWEEP:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
-        all_params_no_agent = product(alpha_params, replay_buffer_sizes, gamma_params)
+        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_buffer_sizes))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
         best_agent_results = {}
         avg_results = []
@@ -169,10 +185,21 @@ if __name__ == "__main__":
         i = 0
         for agent in best_agent_results.keys():
             episodes = [episode for episode in range(num_episodes)]
-            plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[2]), best_agent_results[agent].params[0]))
+            if agent in AUX_AGENTS:
+                plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3])))
+            else:
+                plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
             i += 1
         setup_plot()
         do_plotting()
+
+        #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
+        reg_agent_param_settings = list(product(alpha_params, gamma_params))
+        for reg_agent_params in reg_agent_param_settings:
+            for key in param_setting_results.keys():
+                if reg_agent_params != key and reg_agent_params == key[:len(key) - 1]:
+                    param_setting_results[key] = merge_two_dicts(param_setting_results[key], param_setting_results[reg_agent_params])
+            del param_setting_results[reg_agent_params]
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
@@ -182,7 +209,10 @@ if __name__ == "__main__":
             i = 0
             for agent in cur_param_setting_result.keys():
                 episodes = [episode for episode in range(num_episodes)]
-                plt.plot(episodes, cur_param_setting_result[agent], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(param_setting[0]), str(param_setting[2]), str(param_setting[1]), agent))
+                if agent in AUX_AGENTS:
+                    plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3])))
+                else:
+                    plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
                 i += 1
             setup_plot()
             do_plotting(file_name_suffix)
@@ -196,7 +226,7 @@ if __name__ == "__main__":
 
         for i in range(len(avg_results)):
             cur_data = [episode for episode in range(num_episodes)]
-            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][2]), all_param_settings[i][0]))
+            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Alpha = {} Gamma = {} N = {} AGENT = {}".format(str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][2]), all_param_settings[i][0]))
         setup_plot()
         do_plotting()
 
