@@ -97,9 +97,9 @@ if __name__ == "__main__":
     #Agent and environment parameters, and experiment settings
     if args.sweep:
         IS_SWEEP = True
-        alpha_params = [0.1, 0.01]
-        gamma_params = GAMMA = [0, 0.95]
-        replay_buffer_sizes =  [1, 10]
+        alpha_params = [0.1, 0.01, 0.001]
+        gamma_params = GAMMA = [0, 0.95, 1]
+        replay_buffer_sizes =  [1, 10, 25]
 
     else:
         IS_SWEEP = False
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 2
     max_steps = 1000
     num_runs = 1
 
@@ -166,20 +166,21 @@ if __name__ == "__main__":
         for i in range(len(all_results)):
             cur_data = [np.mean(run) for run in zip(*all_results[i])]
             avg_results.append(cur_data)
+            cur_overall_average = np.mean(cur_data) #NOTE: This is the average time spent getting to the goal across all runs for all episodes, for that agent, to give it a final overall score with which to compare it to other agents
+
+            cur_agent = all_param_settings[i][0]
+            agent_data = namedtuple("agent_data_tuple", ["data", "average", "params"])
+            agent_data.average = cur_overall_average
+            agent_data.data = cur_data
+            agent_data.params = all_param_settings[i]
 
             #Group results by the best performing parameter setting for each agent
-            cur_agent = all_param_settings[i][0]
-            cur_overall_average = np.mean(cur_data)#NOTE: This is the average time spent getting to the goal across all runs for all episodes, for that agent, to give it a final overall score with which to compare it to other agents
             if cur_agent not in best_agent_results or cur_overall_average < best_agent_results[cur_agent].average:
-                agent_data = namedtuple("agent_data_tuple", ["data", "average", "params"])
-                agent_data.average = cur_overall_average
-                agent_data.data = cur_data
-                agent_data.params = all_param_settings[i]
                 best_agent_results[cur_agent] = agent_data
 
             #Group by each parameter setting to compare agent's across specific parameter settings
             cur_param_setting = tuple(all_param_settings[i][1:])
-            param_setting_results[cur_param_setting][cur_agent] = cur_data
+            param_setting_results[cur_param_setting][cur_agent] = agent_data
 
         #Create a table to show the best parameters for each agent
         i = 0
@@ -210,9 +211,9 @@ if __name__ == "__main__":
             for agent in cur_param_setting_result.keys():
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
-                    plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3])))
+                    plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3])))
                 else:
-                    plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
+                    plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2])))
                 i += 1
             setup_plot()
             do_plotting(file_name_suffix)
