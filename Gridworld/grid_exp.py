@@ -34,8 +34,8 @@ import matplotlib.pyplot as plt
 
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
 #AGENTS = ['random', 'tabularQ', 'neural', 'reward', 'state', 'redundant', 'noise']
-#AGENTS = ['random', 'tabularQ', 'neural']
-AGENTS = ['random']
+AGENTS = ['random', 'tabularQ', 'neural']
+#AGENTS = ['random']
 VALID_MOVE_SETS = [4, 8, 9]
 
 def do_plotting(suffix=0):
@@ -166,25 +166,25 @@ if __name__ == "__main__":
             param_setting_results[cur_param_setting][cur_agent] = cur_data
 
         #Create a table to show the best parameters for each agent
-        setup_plot()
         i = 0
         for agent in best_agent_results.keys():
             episodes = [episode for episode in range(num_episodes)]
             plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[2]), best_agent_results[agent].params[0]))
             i += 1
+        setup_plot()
         do_plotting()
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
         for param_setting in param_setting_results:
             plt.clf()
-            setup_plot()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
             for agent in cur_param_setting_result.keys():
                 episodes = [episode for episode in range(num_episodes)]
                 plt.plot(episodes, cur_param_setting_result[agent], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(param_setting[0]), str(param_setting[2]), str(param_setting[1]), agent))
                 i += 1
+            setup_plot()
             do_plotting(file_name_suffix)
             file_name_suffix += 1
 
@@ -194,11 +194,10 @@ if __name__ == "__main__":
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
 
-        setup_plot()
-
         for i in range(len(avg_results)):
             cur_data = [episode for episode in range(num_episodes)]
-            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), GAMMA, str(all_param_settings[i][2]), all_param_settings[i][0]))
+            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Epsilon Min = {} Alpha = {} Gamma = {} N = {} AGENT = {}".format(EPSILON, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][2]), all_param_settings[i][0]))
+        setup_plot()
         do_plotting()
 
     print("Experiment completed!")
