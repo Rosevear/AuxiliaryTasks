@@ -1,12 +1,16 @@
 #!/bin/bash
 echo "Running auxiliary task experiments..."
 echo "Running auxiliary experiments for deterministic gridworld with rich rewards..."
-python grid_exp.py -name "rich deterministic gridworld final"
+python grid_exp.py --sweep --name "rich deterministic gridworld"
 echo "Running auxiliary experiments for deterministic gridworld with sparse rewards..."
-python grid_exp.py --sparse -name "sparse deterministic gridworld final"
+python grid_exp.py --sweep --sparse --name "sparse deterministic gridworld"
 echo "Running auxiliary experiments for stochastic gridworld with rich rewards..."
-python grid_exp.py --stochastic -name "strong stochastic rich gridworld final"
+python grid_exp.py --sweep --stochastic --name "stochastic rich gridworld"
 echo "Running auxiliary experiments for stochastic gridworld with sparse rewards..."
-python grid_exp.py --stochastic --sparse -name "strong stochastic sparse gridworld final"
+python grid_exp.py --sweep --stochastic --sparse --name "stochastic sparse gridworld"
 echo "All experiments completed!"
+mkdir Results
+mkdir Results/model_summaries
+mv "* agent model.png" Results/model_summaries
+mv "* agent model.txt" Results/model_summaries
 mv *.png Results

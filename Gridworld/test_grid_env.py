@@ -55,8 +55,6 @@ class TestGridEnv(unittest.TestCase):
         self.assertEqual(e_globs.current_state, [2, 2])
 
 
-
-
     def test_env_step_sparse(self):
         e_globs.IS_SPARSE = True
 
