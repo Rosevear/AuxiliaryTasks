@@ -1,14 +1,16 @@
 # AuxiliaryTasks
-For CMPUT701 Capstone on Auxiliary Tasks, at the University of alberta, Fall 2018
+For CMPUT701 Capstone on Auxiliary Tasks, at the University of Alberta, Fall 2018
 
 #####Description#####
+
 A research project that explores the impact of auxiliary tasks, as defined in Jaderberg, Max, et al. "Reinforcement learning with unsupervised auxiliary tasks." arXiv preprint arXiv:1611.05397 (2016).,
 in a simple gridworld environment to observe their impact on environments with different reward and state transition dynamics
 
 ####Installation####
+
 #Make sure you have python (2.7.12) and the pip package manager installed
 
-#Install virtualenv: https://virtualenv.pypa.io/en/stable/ (it is used to create a virtual environment that keeps python dependencies separate)
+#Install virtualenv: https://virtualenv.pypa.io/en/stable/ (it is used to create a virtual environment to keep python dependencies between projects separate from each other and the global system packages)
 
 #Create a virtualenv to house the project
 
