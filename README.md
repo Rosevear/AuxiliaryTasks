@@ -1,5 +1,5 @@
 # AuxiliaryTasks
-Cmput701 Capstone on Auxiliary Tasks
+For CMPUT701 Capstone on Auxiliary Tasks, at the University of alberta, Fall 2018
 
 #####Description#####
 A research project that explores the impact of auxiliary tasks, as defined in Jaderberg, Max, et al. "Reinforcement learning with unsupervised auxiliary tasks." arXiv preprint arXiv:1611.05397 (2016).,
