@@ -98,13 +98,13 @@ if __name__ == "__main__":
         IS_SWEEP = True
         alpha_params = [0.1, 0.01, 0.001]
         gamma_params = GAMMA = [0, 0.95, 1]
-        replay_buffer_sizes =  [1, 10, 25]
+        replay_context_sizes =  [1, 10, 25]
 
     else:
         IS_SWEEP = False
         alpha_params = [args.a]
         gamma_params = [args.g]
-        replay_buffer_sizes = [args.n]
+        replay_context_sizes = [args.n]
 
     EPSILON = args.e
     IS_STOCHASTIC = args.stochastic
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     num_runs = 1
 
     #The main experiment loop
-    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_buffer_sizes))
+    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes))
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     #Process and plot the results
     if IS_SWEEP:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
-        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_buffer_sizes))
+        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
         best_agent_results = {}
         avg_results = []

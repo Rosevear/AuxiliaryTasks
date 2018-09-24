@@ -145,7 +145,7 @@ def agent_init():
 
         #Initialize the model
         rms = RMSprop(lr=ALPHA)
-        loss_weights = {'main_output': 1.0, 'aux_output': 0.5}
+        loss_weights = {'main_output': 1.0, 'aux_output': 1.0}
         model = Model(inputs=[main_input, aux_input], outputs=[main_output, aux_output])
         model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
 
