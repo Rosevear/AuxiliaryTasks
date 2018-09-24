@@ -222,10 +222,7 @@ def agent_step(reward, state):
 
         update_replay_buffer(cur_state, cur_action, reward, next_state)
 
-        if AGENT == REDUNDANT:
-            aux_dummy = np.zeros(shape=(1, FEATURE_VECTOR_SIZE,))
-        else:
-            aux_dummy = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
+        aux_dummy = set_up_empty_aux_input()
 
         #Get the best action over all actions possible in the next state, ie max_a(Q, a)
         q_vals, _ = model.predict([state_encode_1_hot([next_state]), aux_dummy], batch_size=1)
@@ -301,10 +298,7 @@ def agent_end(reward):
     else:
         update_replay_buffer(cur_state, cur_action, reward, GOAL_STATE)
 
-        if AGENT == REDUNDANT:
-            aux_dummy = np.zeros(shape=(1, FEATURE_VECTOR_SIZE,))
-        else:
-            aux_dummy = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
+        aux_dummy = set_up_empty_aux_input()
 
         #Get the best action over all actions possible in the next state, ie max_a(Q, a)
         cur_state_1_hot = state_encode_1_hot([cur_state])
@@ -391,10 +385,7 @@ def get_max_action_tabular(state):
 def get_max_action_aux(state):
     "Return the maximum acton to take given the current state"
 
-    if AGENT == REDUNDANT:
-        aux_dummy = np.zeros(shape=(1, FEATURE_VECTOR_SIZE,))
-    else:
-        aux_dummy = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
+    aux_dummy = set_up_empty_aux_input()
     q_vals, _ = model.predict([state_encode_1_hot([state]), aux_dummy], batch_size=1)
 
     return np.argmax(q_vals[0])
@@ -491,3 +482,16 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     else:
         cur_transition = buffer_two[rand_in_range(len(buffer_two))]
     return cur_transition
+
+def set_up_empty_aux_input():
+    "Sets up empty auxiliary input of the correct dimensions and returns it"
+
+    if AGENT == REDUNDANT:
+        aux_dummy = np.zeros(shape=(1, FEATURE_VECTOR_SIZE,))
+    else:
+        aux_dummy = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
+    # if AGENT == REDUNDANT:
+    #     aux_input = np.zeros(shape=(1, FEATURE_VECTOR_SIZE * 2,))
+    # else:
+    #     aux_input = np.zeros(shape=(1, FEATURE_VECTOR_SIZE + (AUX_FEATURE_VECTOR_SIZE * N),))
+    return aux_dummy
