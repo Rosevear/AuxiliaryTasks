@@ -309,7 +309,7 @@ def agent_end(reward):
         #Get the best action over all actions possible in the next state, ie max_a(Q, a)
         cur_state_1_hot = state_encode_1_hot([cur_state])
         q_vals, _ = model.predict([cur_state_1_hot, aux_dummy], batch_size=1)
-        q_vals[0][cur_action] = reward = reward
+        q_vals[0][cur_action] = reward
 
         #Sample a transition from the replay buffer to use for auxiliary task training
         cur_transition = None
