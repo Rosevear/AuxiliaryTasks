@@ -112,9 +112,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 50
+    num_episodes = 1
     max_steps = 1000
-    num_runs = 25
+    num_runs = 1
 
     #The main experiment loop
     all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_buffer_sizes))
@@ -219,14 +219,14 @@ if __name__ == "__main__":
             file_name_suffix += 1
 
     else:
-        #Average the results for each parameter setting over all of the runs
+        #Average the results over all of the runs
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
 
         for i in range(len(avg_results)):
             cur_data = [episode for episode in range(num_episodes)]
-            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="Alpha = {} Gamma = {} N = {} AGENT = {}".format(str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][2]), all_param_settings[i][0]))
+            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}".format(str(all_param_settings[i][0]), str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][0]))
         setup_plot()
         do_plotting()
 
