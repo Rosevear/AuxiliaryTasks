@@ -222,7 +222,7 @@ def agent_step(reward, state):
 
         aux_dummy = set_up_empty_aux_input()
         next_state_1_hot = state_encode_1_hot([next_state])
-        
+
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
         q_vals, _ = model.predict(np.concatenate([aux_dummy, next_state_1_hot], axis=1), batch_size=1)
         q_max = np.max(q_vals)

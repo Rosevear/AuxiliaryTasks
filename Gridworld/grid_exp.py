@@ -67,9 +67,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
     parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
-    parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
-    parser.add_argument('-g', nargs='?', type=float, default=1, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 1.0')
-    parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. Default n = 3') #TODO: MAKE THIS DEFAULT #
+    parser.add_argument('-a', nargs='?', type=float, default=0.1, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
+    parser.add_argument('-g', nargs='?', type=float, default=0.95, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
+    parser.add_argument('-n', nargs='?', type=int, default=3, help='The number of states to use in the auxiliary prediction tasks. Default n = 3') #TODO: MAKE THIS DEFAULT #
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
     parser.add_argument('--windy', action='store_true', help='Specify whether to use a single step or multistep agent.')
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
@@ -112,9 +112,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 50
     max_steps = 1000
-    num_runs = 1
+    num_runs = 25
 
     #The main experiment loop
     all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes))
