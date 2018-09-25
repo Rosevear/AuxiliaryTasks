@@ -113,9 +113,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 50
+    num_episodes = 1
     max_steps = 1000
-    num_runs = 25
+    num_runs = 1
 
     #The main experiment loop
     all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes))

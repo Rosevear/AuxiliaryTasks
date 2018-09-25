@@ -1,4 +1,4 @@
-current_state = None
+#Constants, per run
 IS_SPARSE = None
 IS_STOCHASTIC = None
 
@@ -17,3 +17,6 @@ MIN_COLUMN = 0
 START_STATE = [3, 0]
 GOAL_STATE = [5, 8]
 OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
+
+#Variables
+current_state = None
