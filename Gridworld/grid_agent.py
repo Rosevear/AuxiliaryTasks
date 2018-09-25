@@ -101,7 +101,7 @@ def agent_init():
         main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
         aux_output = Dense(num_outputs, activation=cur_activation, kernel_initializer=init_weights, name='aux_output')(aux_task_full_layer)
 
-        #Initialize the a_globs.model
+        #Initialize the model
         rms = RMSprop(lr=a_globs.ALPHA)
         loss_weights = {'main_output': 1.0, 'aux_output': 1.0}
         a_globs.model = Model(inputs=main_input, outputs=[main_output, aux_output])
