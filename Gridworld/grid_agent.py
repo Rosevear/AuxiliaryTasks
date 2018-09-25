@@ -39,8 +39,8 @@ N = None
 IS_STOCHASTIC = None
 NUM_ACTIONS = 4
 
-FEATURE_VECTOR_SIZE = NUM_ROWS * NUM_COLUMNS
-AUX_FEATURE_VECTOR_SIZE = NUM_ROWS * NUM_COLUMNS * NUM_ACTIONS
+FEATURE_VECTOR_SIZE = 2
+AUX_FEATURE_VECTOR_SIZE = FEATURE_VECTOR_SIZE + 1
 
 #Used for sampling in the auxiliary tasks
 BUFFER_SIZE = 10
@@ -193,8 +193,8 @@ def agent_step(reward, state):
 
     elif AGENT == NEURAL:
         #Get the best action over all actions possible in the next state, ie max_a(Q, a)
-        next_state_1_hot = state_encode_1_hot([next_state])
-        q_vals = model.predict(next_state_1_hot, batch_size=1)
+        next_state_coded = format_state(next_state)
+        q_vals = model.predict(next_state_coded, batch_size=1)
         q_max = np.max(q_vals)
         cur_action_target = reward + GAMMA * q_max
 
@@ -205,12 +205,12 @@ def agent_step(reward, state):
             next_action = rand_in_range(NUM_ACTIONS)
 
         #Get the value for the current state of the action which was just taken ie Q(S, A)
-        cur_state_1_hot = state_encode_1_hot([cur_state])
-        q_vals = model.predict(cur_state_1_hot, batch_size=1)
+        cur_state_coded = format_state(next_state)
+        q_vals = model.predict(cur_state_coded, batch_size=1)
         q_vals[0][cur_action] = cur_action_target
 
         #Update the weights
-        model.fit(cur_state_1_hot, q_vals, batch_size=1, epochs=1, verbose=0)
+        model.fit(cur_state_coded, q_vals, batch_size=1, epochs=1, verbose=0)
 
     elif AGENT == RANDOM:
         next_action = rand_in_range(NUM_ACTIONS)
@@ -220,10 +220,10 @@ def agent_step(reward, state):
 
         update_replay_buffer(cur_state, cur_action, reward, next_state)
         aux_dummy = set_up_empty_aux_input()
-        next_state_1_hot = state_encode_1_hot([next_state])
+        next_state_coded = format_state(next_state)
 
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-        q_vals, _ = model.predict(np.concatenate([aux_dummy, next_state_1_hot], axis=1), batch_size=1)
+        q_vals, _ = model.predict(np.concatenate([aux_dummy, next_state_coded], axis=1), batch_size=1)
         q_max = np.max(q_vals)
         cur_action_target = reward + (GAMMA * q_max)
 
@@ -234,8 +234,8 @@ def agent_step(reward, state):
             next_action = rand_in_range(NUM_ACTIONS)
 
         #Get the learning target q-value for the current state
-        cur_state_1_hot = state_encode_1_hot([cur_state])
-        q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_1_hot], axis=1), batch_size=1)
+        cur_state_coded = format_state(cur_state)
+        q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
         q_vals[0][cur_action] = cur_action_target
 
         #Sample a transition from the replay buffer to use for auxiliary task training
@@ -253,25 +253,23 @@ def agent_step(reward, state):
         if cur_transition:
             #Set the auxiliary input depending on the task
             if AGENT == REDUNDANT:
-                aux_input = cur_state_1_hot
+                aux_input = cur_state_coded
             else:
-                aux_input = encode_1_hot(cur_transition.states, cur_transition.actions)
+                aux_input = format_state_actions(cur_transition.states, cur_transition.actions)
 
             if AGENT == REWARD:
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
                 aux_target = np.array([abs(cur_transition.reward)])
-                #pred_q, _ = model.predict(np.concatenate([aux_input, cur_state_1_hot], axis=1)
             elif AGENT == STATE:
-                aux_target = state_encode_1_hot([cur_transition.next_state])
-                #pred_q, _ = model.predict(aux_input + cur_state_1_hot)
+                aux_target = format_state(cur_transition.next_state)
             elif AGENT == NOISE:
                 aux_target = np.array([rand_un() for i in range(NUM_NOISE_NODES)]).reshape(1, NUM_NOISE_NODES)
             elif AGENT == REDUNDANT:
                 nested_q_vals = [q_vals for i in range(NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, NUM_ACTIONS * NUM_REDUNDANT_TASKS)
-            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
+            model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
 
 
     cur_state = next_state
@@ -284,10 +282,10 @@ def agent_end(reward):
         state_action_values[cur_state[0]][cur_state[1]][cur_action] += ALPHA * (reward - state_action_values[cur_state[0]][cur_state[1]][cur_action])
     elif AGENT == NEURAL:
         #Update the network weights
-        cur_state_1_hot = state_encode_1_hot([cur_state])
-        q_vals = model.predict(cur_state_1_hot, batch_size=1)
+        cur_state_coded = format_state(cur_state)
+        q_vals = model.predict(cur_state_coded, batch_size=1)
         q_vals[0][cur_action] = reward
-        model.fit(cur_state_1_hot, q_vals, batch_size=1, epochs=1, verbose=1)
+        model.fit(cur_state_coded, q_vals, batch_size=1, epochs=1, verbose=1)
 
     elif AGENT == RANDOM:
         pass
@@ -298,8 +296,8 @@ def agent_end(reward):
 
         #Get the Q-value for the current state
         aux_dummy = set_up_empty_aux_input()
-        cur_state_1_hot = state_encode_1_hot([cur_state])
-        q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_1_hot], axis=1), batch_size=1)
+        cur_state_coded = format_state(cur_state)
+        q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
         q_vals[0][cur_action] = reward
 
         #Sample a transition from the replay buffer to use for auxiliary task training
@@ -317,25 +315,23 @@ def agent_end(reward):
         if cur_transition is not None:
             #Set the auxiliary input depending on the task
             if AGENT == REDUNDANT:
-                aux_input = cur_state_1_hot
+                aux_input = cur_state_coded
             else:
-                aux_input = encode_1_hot(cur_transition.states, cur_transition.actions)
+                aux_input = format_state_actions(cur_transition.states, cur_transition.actions)
 
             if AGENT == REWARD:
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
                 aux_target = np.array([abs(cur_transition.reward)])
-                #pred_q, _ = model.predict(aux_input + cur_state_1_hot)
             elif AGENT == STATE:
-                aux_target = state_encode_1_hot([cur_transition.next_state])
-                #pred_q, _ = model.predict(aux_input + cur_state_1_hot)
+                aux_target = format_state(cur_transition.next_state)
             elif AGENT == NOISE:
                 aux_target = np.array([rand_un() for i in range(NUM_NOISE_NODES)]).reshape(1, NUM_NOISE_NODES)
             elif AGENT == REDUNDANT:
                 nested_q_vals = [q_vals for i in range(NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, NUM_ACTIONS * NUM_REDUNDANT_TASKS)
-            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
+            model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
     return
 
 def agent_cleanup():
@@ -362,8 +358,8 @@ def agent_message(in_message):
 def get_max_action(state):
     "Return the maximum action to take given the current state"
 
-    cur_state_1_hot = state_encode_1_hot([state])
-    q_vals = model.predict(cur_state_1_hot, batch_size=1)
+    cur_state_coded = format_state(state)
+    q_vals = model.predict(cur_state_coded, batch_size=1)
     return np.argmax(q_vals[0])
 
 def get_max_action_tabular(state):
@@ -386,36 +382,10 @@ def get_max_action_aux(state):
     "Return the maximum acton to take given the current state"
 
     aux_dummy = set_up_empty_aux_input()
-    cur_state_coded = state_encode_1_hot([state])
+    cur_state_coded = format_state(state)
     q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
 
     return np.argmax(q_vals[0])
-
-def state_encode_1_hot(states):
-    "Return a one hot encoding of the current list of states"
-
-    all_states_1_hot = []
-    for state in states:
-        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS))
-        state_1_hot[state[0]][state[1]] = 1
-        state_1_hot = state_1_hot.reshape(1, FEATURE_VECTOR_SIZE)
-        all_states_1_hot.append(state_1_hot)
-
-    return np.concatenate(all_states_1_hot, axis=1)
-
-def encode_1_hot(states, actions):
-    "Return a 1 hot encoding of the current list of states and the accompanying actions"
-
-    all_states_1_hot = []
-    for i in range(len(states)):
-        state = states[i]
-        action = actions[i]
-        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS, NUM_ACTIONS))
-        state_1_hot[state[0]][state[1]][action] = 1
-        state_1_hot = state_1_hot.reshape(1, AUX_FEATURE_VECTOR_SIZE)
-        all_states_1_hot.append(state_1_hot)
-
-    return np.concatenate(all_states_1_hot, axis=1)
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     global cur_context, cur_context_actions, zero_reward_buffer, non_zero_reward_buffer, zero_buffer_count, non_zero_buffer_count, deterministic_state_buffer, deterministic_state_buffer_count, stochastic_state_buffer, stochastic_state_buffer_count
@@ -498,3 +468,58 @@ def set_up_empty_aux_input():
     else:
         aux_input = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
     return aux_input
+
+#TODO: REfactor to reduce duplication
+def state_encode_1_hot(states):
+    "Return a one hot encoding of the current list of states"
+
+    all_states_1_hot = []
+    for state in states:
+        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS))
+        state_1_hot[state[0]][state[1]] = 1
+        state_1_hot = state_1_hot.reshape(1, FEATURE_VECTOR_SIZE)
+        all_states_1_hot.append(state_1_hot)
+
+    return np.concatenate(all_states_1_hot, axis=1)
+
+def encode_1_hot(states, actions):
+    "Return a 1 hot encoding of the current list of states and the accompanying actions"
+
+    all_states_1_hot = []
+    for i in range(len(states)):
+        state = states[i]
+        action = actions[i]
+        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS, NUM_ACTIONS))
+        state_1_hot[state[0]][state[1]][action] = 1
+        state_1_hot = state_1_hot.reshape(1, AUX_FEATURE_VECTOR_SIZE)
+        all_states_1_hot.append(state_1_hot)
+
+    return np.concatenate(all_states_1_hot, axis=1)
+
+#TODO: Refactor to reduce duplication
+def format_state(state):
+    """
+    Shift the x and y coordinates that define a state value so that it starts at (1, 1).
+    We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
+    We also turn the bare list representation into a numpy array to use with the network
+    """
+    state = list(state)
+
+    state[0] += 1
+    state[1] += 1
+    formatted_state = np.array(state).reshape(1, FEATURE_VECTOR_SIZE)
+
+    return formatted_state
+
+def format_state_actions(states, actions):
+
+    for i in range(len(states)):
+        states[i][0] += 1
+        states[i][1] += 1
+        actions[i] += 1
+
+    #flatten the states list
+    states = [coordinate for state in states for coordinate in state]
+    formatted_state_action = np.array(states + actions).reshape(1, AUX_FEATURE_VECTOR_SIZE * N)
+
+    return formatted_state_action
