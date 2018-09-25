@@ -219,14 +219,13 @@ def agent_step(reward, state):
     else:
 
         update_replay_buffer(cur_state, cur_action, reward, next_state)
-
         aux_dummy = set_up_empty_aux_input()
         next_state_1_hot = state_encode_1_hot([next_state])
 
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
         q_vals, _ = model.predict(np.concatenate([aux_dummy, next_state_1_hot], axis=1), batch_size=1)
         q_max = np.max(q_vals)
-        cur_action_target = reward + GAMMA * q_max
+        cur_action_target = reward + (GAMMA * q_max)
 
         #Choose the next action, epsilon greedy style
         if rand_un() < 1 - cur_epsilon:
@@ -234,7 +233,7 @@ def agent_step(reward, state):
         else:
             next_action = rand_in_range(NUM_ACTIONS)
 
-        #Get the appropriate q-value for the current state
+        #Get the learning target q-value for the current state
         cur_state_1_hot = state_encode_1_hot([cur_state])
         q_vals, _ = model.predict(np.concatenate([aux_dummy, cur_state_1_hot], axis=1), batch_size=1)
         q_vals[0][cur_action] = cur_action_target
@@ -251,7 +250,7 @@ def agent_step(reward, state):
                 cur_transition = sample_from_buffers(deterministic_state_buffer)
 
         #Update the current q-value and auxiliary task output towards their respective targets
-        if cur_transition is not None:
+        if cur_transition:
             #Set the auxiliary input depending on the task
             if AGENT == REDUNDANT:
                 aux_input = cur_state_1_hot
@@ -272,7 +271,7 @@ def agent_step(reward, state):
             elif AGENT == REDUNDANT:
                 nested_q_vals = [q_vals for i in range(NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, NUM_ACTIONS * NUM_REDUNDANT_TASKS)
-            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), [q_vals, aux_target], batch_size=1, epochs=1, verbose=0)
+            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
 
 
     cur_state = next_state
@@ -336,7 +335,7 @@ def agent_end(reward):
             elif AGENT == REDUNDANT:
                 nested_q_vals = [q_vals for i in range(NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, NUM_ACTIONS * NUM_REDUNDANT_TASKS)
-            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), [q_vals, aux_target], batch_size=1, epochs=1, verbose=1)
+            model.fit(np.concatenate([aux_input, cur_state_1_hot], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
     return
 
 def agent_cleanup():
@@ -348,6 +347,8 @@ def agent_cleanup():
 
 def agent_message(in_message):
     global EPSILON_MIN, ALPHA, GAMMA, AGENT, N, IS_STOCHASTIC
+    "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
+
     params = json.loads(in_message)
     EPSILON_MIN = params["EPSILON"]
     ALPHA = params['ALPHA']
@@ -400,7 +401,7 @@ def state_encode_1_hot(states):
         state_1_hot = state_1_hot.reshape(1, FEATURE_VECTOR_SIZE)
         all_states_1_hot.append(state_1_hot)
 
-    return np.concatenate(all_states_1_hot, 1)
+    return np.concatenate(all_states_1_hot, axis=1)
 
 def encode_1_hot(states, actions):
     "Return a 1 hot encoding of the current list of states and the accompanying actions"
@@ -414,7 +415,7 @@ def encode_1_hot(states, actions):
         state_1_hot = state_1_hot.reshape(1, AUX_FEATURE_VECTOR_SIZE)
         all_states_1_hot.append(state_1_hot)
 
-    return np.concatenate(all_states_1_hot, 1)
+    return np.concatenate(all_states_1_hot, axis=1)
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     global cur_context, cur_context_actions, zero_reward_buffer, non_zero_reward_buffer, zero_buffer_count, non_zero_buffer_count, deterministic_state_buffer, deterministic_state_buffer_count, stochastic_state_buffer, stochastic_state_buffer_count
@@ -428,15 +429,18 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
     cur_context_actions.append(cur_action)
     cur_transition = None
     if len(cur_context) == N:
+        #Construct the observation used by the auxiliary taks
         cur_transition = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
         cur_transition.states = list(cur_context)
         cur_transition.reward = reward
         cur_transition.next_state = next_state
         cur_transition.actions = list(cur_context_actions)
+
+        #Remove the oldest states from the context, to allow new ones to be added in a sliding window style
         cur_context.pop(0)
         cur_context_actions.pop(0)
 
-    if cur_transition is not None:
+    if cur_transition:
         if AGENT == STATE:
             if  cur_transition.states[-1] in OBSTACLE_STATES:
                 add_to_buffer(stochastic_state_buffer, cur_transition, stochastic_state_buffer_count)
@@ -484,7 +488,10 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     return cur_transition
 
 def set_up_empty_aux_input():
-    "Sets up empty auxiliary input of the correct dimensions and returns it"
+    """
+    Sets up empty auxiliary input of the correct dimensions and returns it.
+    Used for when predicting the main output of networks with auxiliary tasks
+    """
 
     if AGENT == REDUNDANT:
         aux_input = np.zeros(shape=(1, FEATURE_VECTOR_SIZE,))
