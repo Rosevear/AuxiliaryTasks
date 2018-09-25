@@ -98,7 +98,7 @@ if __name__ == "__main__":
         IS_SWEEP = True
         alpha_params = [0.1, 0.01, 0.001]
         gamma_params = GAMMA = [0, 0.95, 1]
-        replay_context_sizes =  [1, 10, 25]
+        replay_context_sizes =  [3]
 
     else:
         IS_SWEEP = False
@@ -112,9 +112,9 @@ if __name__ == "__main__":
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
 
-    num_episodes = 1
+    num_episodes = 50
     max_steps = 1000
-    num_runs = 1
+    num_runs = 25
 
     #The main experiment loop
     all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes))
