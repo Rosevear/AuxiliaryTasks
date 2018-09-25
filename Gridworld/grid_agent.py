@@ -66,7 +66,7 @@ NOISE = 'noise'
 
 #TODO: Refactor some of the neural network and auxiliary task code to reduce duplication
 #TODO: Refactor the update exeprience replay code to reduce duplication
-#TODO: Look into making how globals are used more consistent, sometimes they are passed into local functions and sometimes they are just declared global in those functions
+#TODO: Make the input type a user set parameter and then use functional programming to set which function is used to format the state
 
 def agent_init():
     global state_action_values, observed_state_action_pairs, observed_states, model, cur_epsilon, zero_reward_buffer, zero_buffer_count, non_zero_reward_buffer, non_zero_buffer_count, deterministic_state_buffer, deterministic_state_buffer_count, stochastic_state_buffer, stochastic_state_buffer_count
@@ -469,40 +469,39 @@ def set_up_empty_aux_input():
         aux_input = np.zeros(shape=(1, AUX_FEATURE_VECTOR_SIZE * N,))
     return aux_input
 
-#TODO: REfactor to reduce duplication
-def state_encode_1_hot(states):
-    "Return a one hot encoding of the current list of states"
+#NOTE: 1 hot encoding format
+# def format_state(state):
+#     "Return a one hot encoding of the current list of states"
+#
+#     state = list(state)
+#     state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS))
+#     state_1_hot[state[0]][state[1]] = 1
+#     state_1_hot_formatted = state_1_hot.reshape(1, FEATURE_VECTOR_SIZE)
+#
+#     return state_1_hot_formatted
+#
+# def format_state_actions(states, actions):
+#     "Return a 1 hot encoding of the current list of states and the accompanying actions"
+#
+#     all_states_1_hot = []
+#     for i in range(len(states)):
+#         state = states[i]
+#         action = actions[i]
+#         state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS, NUM_ACTIONS))
+#         state_1_hot[state[0]][state[1]][action] = 1
+#         state_1_hot = state_1_hot.reshape(1, AUX_FEATURE_VECTOR_SIZE)
+#         all_states_1_hot.append(state_1_hot)
+#
+#     return np.concatenate(all_states_1_hot, axis=1)
 
-    all_states_1_hot = []
-    for state in states:
-        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS))
-        state_1_hot[state[0]][state[1]] = 1
-        state_1_hot = state_1_hot.reshape(1, FEATURE_VECTOR_SIZE)
-        all_states_1_hot.append(state_1_hot)
-
-    return np.concatenate(all_states_1_hot, axis=1)
-
-def encode_1_hot(states, actions):
-    "Return a 1 hot encoding of the current list of states and the accompanying actions"
-
-    all_states_1_hot = []
-    for i in range(len(states)):
-        state = states[i]
-        action = actions[i]
-        state_1_hot = np.zeros((NUM_ROWS, NUM_COLUMNS, NUM_ACTIONS))
-        state_1_hot[state[0]][state[1]][action] = 1
-        state_1_hot = state_1_hot.reshape(1, AUX_FEATURE_VECTOR_SIZE)
-        all_states_1_hot.append(state_1_hot)
-
-    return np.concatenate(all_states_1_hot, axis=1)
-
-#TODO: Refactor to reduce duplication
+#NOTE: coordinate state formatting, with shifted origin
 def format_state(state):
     """
-    Shift the x and y coordinates that define a state value so that it starts at (1, 1).
+    Shift the x and y coordinates that define a state value so that it starts at (1, 1), from the point of new of the neural network.
     We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
     We also turn the bare list representation into a numpy array to use with the network
     """
+    #To guard against tuple inputs that are immutable
     state = list(state)
 
     state[0] += 1
