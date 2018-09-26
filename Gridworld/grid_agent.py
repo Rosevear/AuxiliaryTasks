@@ -65,7 +65,7 @@ def agent_init():
         a_globs.deterministic_state_buffer = []
         a_globs.stochastic_state_buffer_count = []
         a_globs.deterministic_state_buffer_count = 0
-        stochastic_state_buffer_count = 0
+        a_globs.stochastic_state_buffer_count = 0
 
         if a_globs.AGENT == a_globs.REWARD:
             num_outputs = 1
@@ -198,31 +198,23 @@ def agent_step(reward, state):
         q_vals[0][a_globs.cur_action] = cur_action_target
 
         #Sample a transition from the replay buffer to use for auxiliary task training
-        cur_transition = None
-        if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE :
-            cur_transition = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
-        elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
-            if a_globs.deterministic_state_buffer and a_globs.a_globs.stochastic_state_buffer_count:
-                cur_transition = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.a_globs.stochastic_state_buffer_count)
-        elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
-            if a_globs.deterministic_state_buffer:
-                cur_transition = sample_from_buffers(a_globs.deterministic_state_buffer)
+        cur_observation = do_buffer_sampling()
 
         #Update the current q-value and auxiliary task output towards their respective targets
-        if cur_transition:
+        if cur_observation:
             #Set the auxiliary input depending on the task
             if a_globs.AGENT == a_globs.REDUNDANT:
                 aux_input = cur_state_coded
             else:
-                aux_input = format_state_actions(cur_transition.states, cur_transition.actions)
+                aux_input = format_state_actions(cur_observation.states, cur_observation.actions)
 
             if a_globs.AGENT == a_globs.REWARD:
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([abs(cur_transition.reward)])
+                aux_target = np.array([abs(cur_observation.reward)])
             elif a_globs.AGENT == a_globs.STATE :
-                aux_target = format_state(cur_transition.next_state)
+                aux_target = format_state(cur_observation.next_state)
             elif a_globs.AGENT == a_globs.NOISE:
                 aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
             elif a_globs.AGENT == a_globs.REDUNDANT:
@@ -260,37 +252,36 @@ def agent_end(reward):
         q_vals[0][a_globs.cur_action] = reward
 
         #Sample a transition from the replay buffer to use for auxiliary task training
-        cur_transition = None
-        if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE :
-            cur_transition = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
-        elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
-            if a_globs.deterministic_state_buffer and a_globs.a_globs.stochastic_state_buffer_count:
-                cur_transition = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.a_globs.stochastic_state_buffer_count)
-        elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
-            if a_globs.deterministic_state_buffer:
-                cur_transition = sample_from_buffers(a_globs.deterministic_state_buffer)
+        cur_observation = do_buffer_sampling()
 
         #Update the current q-value and auxiliary task output towards their respective targets
-        if cur_transition is not None:
+        if cur_observation:
             #Set the auxiliary input depending on the task
             if a_globs.AGENT == a_globs.REDUNDANT:
                 aux_input = cur_state_coded
             else:
-                aux_input = format_state_actions(cur_transition.states, cur_transition.actions)
+                aux_input = format_state_actions(cur_observation.states, cur_observation.actions)
 
             if a_globs.AGENT == a_globs.REWARD:
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([abs(cur_transition.reward)])
+                aux_target = np.array([abs(cur_observation.reward)])
             elif a_globs.AGENT == a_globs.STATE :
-                aux_target = format_state(cur_transition.next_state)
+                aux_target = format_state(cur_observation.next_state)
             elif a_globs.AGENT == a_globs.NOISE:
                 aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
             elif a_globs.AGENT == a_globs.REDUNDANT:
                 nested_q_vals = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
             a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
+
+        #Update the neural network without auxiliary input, since the buffer is not yet full
+        #TODO: decide what to do if the buffer isnot yet full
+        # else:
+        #     aux_target = set_up_empty_aux_input()
+        #     a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
+
     return
 
 def agent_cleanup():
@@ -343,62 +334,56 @@ def get_max_action_aux(state):
 
     return np.argmax(q_vals[0])
 
+
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     """
-    Update the replay buffer with the most recent transition, adding a_globs.cur_state to the current global historical context,
-    and mapping that to reward and next_state if the current context == a_globs.a_globs.a_globs.a_globs.a_globs.N, the user set parameter for the context size
+    Update the replay buffer with the most recent transition, adding cur_state to the current global historical context,
+    and mapping that to its reward and next_state if the current context equals the observation size N, the user set parameter
+    for the number of states per observation
     """
 
     #Construct the historical context used in the prediciton tasks, and store them in the replay buffer according to their reward valence
-    a_globs.cur_context.append(a_globs.cur_state)
-    a_globs.cur_context_actions.append(a_globs.cur_action)
-    cur_transition = None
+    a_globs.cur_context.append(cur_state)
+    a_globs.cur_context_actions.append(cur_action)
     if len(a_globs.cur_context) == a_globs.N:
-        #Construct the observation used by the auxiliary taks
-        cur_transition = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
-        cur_transition.states = list(a_globs.cur_context)
-        cur_transition.reward = reward
-        cur_transition.next_state = next_state
-        cur_transition.actions = list(a_globs.cur_context_actions)
+
+        cur_observation = construct_observation(a_globs.cur_context, a_globs.cur_context_actions, reward, next_state)
 
         #Remove the oldest states from the context, to allow new ones to be added in a sliding window style
         a_globs.cur_context.pop(0)
         a_globs.cur_context_actions.pop(0)
 
-    if cur_transition:
         if a_globs.AGENT == a_globs.STATE :
-            if  cur_transition.states[-1] in a_globs.OBSTACLE_STATES:
-                add_to_buffer(a_globs.a_globs.stochastic_state_buffer_count, cur_transition, stochastic_state_buffer_count)
-                stochastic_state_buffer_count += 1
-                if stochastic_state_buffer_count == a_globs.BUFFER_SIZE:
-                    stochastic_state_buffer_count = 0
+            if  cur_observation.states[-1] in a_globs.OBSTACLE_STATES:
+                add_to_buffer(a_globs.stochastic_state_buffer, cur_observation)
             else:
-                add_to_buffer(a_globs.deterministic_state_buffer, cur_transition, a_globs.deterministic_state_buffer_count)
-                a_globs.deterministic_state_buffer_count += 1
-                if a_globs.deterministic_state_buffer_count == a_globs.BUFFER_SIZE:
-                    a_globs.deterministic_state_buffer_count = 0
+                add_to_buffer(a_globs.deterministic_state_buffer, cur_observation)
         else:
             if reward == 0:
-                add_to_buffer(a_globs.zero_reward_buffer, cur_transition, a_globs.zero_buffer_count)
-                a_globs.zero_buffer_count += 1
-                if a_globs.zero_buffer_count == a_globs.BUFFER_SIZE:
-                    a_globs.zero_buffer_count = 0
+                add_to_buffer(a_globs.zero_reward_buffer, cur_observation)
             else:
-                add_to_buffer(a_globs.non_zero_reward_buffer, cur_transition, a_globs.non_zero_buffer_count)
-                a_globs.non_zero_buffer_count += 1
-                if a_globs.non_zero_buffer_count == a_globs.BUFFER_SIZE:
-                    a_globs.non_zero_buffer_count = 0
+                add_to_buffer(a_globs.non_zero_reward_buffer, cur_observation)
 
-def add_to_buffer(cur_buffer, to_add, buffer_count):
+def construct_observation(cur_states, cur_actions, reward, next_state):
+    "Construct the observation used by the auxiliary tasks"
+
+    cur_observation = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
+    cur_observation.states = list(cur_states)
+    cur_observation.actions = list(cur_actions)
+    cur_observation.reward = reward
+    cur_observation.next_state = next_state
+
+    return cur_observation
+
+def add_to_buffer(cur_buffer, item_to_add):
     """
-    Add item to_add to cur_buffer at index buffer_count, otherwise append it to
-    the end of the buffer in the case of buffer overflow
+    Append item_to_add to cur_buffer, maintaining the buffer to be within
+    the size of the BUFFER_SIZE parameter by removing earlier items if necessary
     """
 
-    try:
-        cur_buffer[buffer_count] = to_add
-    except IndexError:
-        cur_buffer.append(to_add)
+    if len(cur_buffer) > a_globs.BUFFER_SIZE:
+        cur_buffer.pop(0)
+    cur_buffer.append(item_to_add)
 
 def sample_from_buffers(buffer_one, buffer_two=None):
     """
@@ -406,11 +391,26 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     Which buffer is sampled is dependent on the current time step, and done in a
     way so as to sample equally from both buffers throughout an episode"
     """
-    if RL_num_steps() % 2 == 0 or buffer_two is None:
-        cur_transition = buffer_one[rand_in_range(len(buffer_one))]
+    if buffer_two is None or RL_num_steps() % 2 == 0:
+        cur_observation = buffer_one[rand_in_range(len(buffer_one))]
     else:
-        cur_transition = buffer_two[rand_in_range(len(buffer_two))]
-    return cur_transition
+        cur_observation = buffer_two[rand_in_range(len(buffer_two))]
+    return cur_observation
+
+def do_buffer_sampling():
+    "Determine which buffer to sample, if any, based on the agent and environment type"
+
+    cur_observation = None
+    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE:
+        cur_observation = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
+    elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
+        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer:
+            cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer)
+    elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
+        if a_globs.deterministic_state_buffer:
+            cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
+
+    return cur_observation
 
 def set_up_empty_aux_input():
     """
