@@ -59,13 +59,9 @@ def agent_init():
         #Initialize the replay buffers for use by the auxiliary prediction tasks
         a_globs.non_zero_reward_buffer = []
         a_globs.zero_reward_buffer = []
-        a_globs.non_zero_buffer_count = 0
-        a_globs.zero_buffer_count = 0
 
         a_globs.deterministic_state_buffer = []
         a_globs.stochastic_state_buffer_count = []
-        a_globs.deterministic_state_buffer_count = 0
-        a_globs.stochastic_state_buffer_count = 0
 
         if a_globs.AGENT == a_globs.REWARD:
             num_outputs = 1
@@ -80,6 +76,7 @@ def agent_init():
         elif a_globs.AGENT == a_globs.STATE :
             num_outputs = a_globs.FEATURE_VECTOR_SIZE
             cur_activation = 'softmax'
+            #TODO: Need to update the loss for when the state is represented as x, y co-ordinates
             loss={'main_output': 'mean_squared_error', 'aux_output': 'categorical_crossentropy'}
 
         elif a_globs.AGENT == a_globs.REDUNDANT:
@@ -262,6 +259,7 @@ def get_max_action(state):
     cur_state_coded = format_state(state)
     q_vals = a_globs.model.predict(cur_state_coded, batch_size=1)
     return np.argmax(q_vals[0])
+
 
 def get_max_action_tabular(state):
     "Return the maximum action to take given the current state."
