@@ -16,7 +16,7 @@ in a simple gridworld environment to observe their impact on environments with d
 
 virtualenv --python=PATH_TO_PYTHON project_name
 
-#Enter the environemtn
+#Enter the environment
 
 cd project_name
 
