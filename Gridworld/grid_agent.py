@@ -197,30 +197,9 @@ def agent_step(reward, state):
         q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
         q_vals[0][a_globs.cur_action] = cur_action_target
 
-        #Sample a transition from the replay buffer to use for auxiliary task training
         cur_observation = do_buffer_sampling()
-
-        #Update the current q-value and auxiliary task output towards their respective targets
         if cur_observation:
-            #Set the auxiliary input depending on the task
-            if a_globs.AGENT == a_globs.REDUNDANT:
-                aux_input = cur_state_coded
-            else:
-                aux_input = format_state_actions(cur_observation.states, cur_observation.actions)
-
-            if a_globs.AGENT == a_globs.REWARD:
-                #We make the rewards positive since we care only about the binary
-                #distinction between zero and non zero rewards and theano binary
-                #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([abs(cur_observation.reward)])
-            elif a_globs.AGENT == a_globs.STATE :
-                aux_target = format_state(cur_observation.next_state)
-            elif a_globs.AGENT == a_globs.NOISE:
-                aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
-            elif a_globs.AGENT == a_globs.REDUNDANT:
-                nested_q_vals = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
-                aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
-            a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
+            do_auxiliary_learning(cur_observation, cur_state_coded, q_vals)
 
 
     a_globs.cur_state = next_state
@@ -232,6 +211,7 @@ def agent_end(reward):
     if a_globs.AGENT == a_globs.TABULAR :
         a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
     elif a_globs.AGENT == a_globs.NEURAL:
+
         #Update the network weights
         cur_state_coded = format_state(a_globs.cur_state)
         q_vals = a_globs.model.predict(cur_state_coded, batch_size=1)
@@ -251,36 +231,9 @@ def agent_end(reward):
         q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
         q_vals[0][a_globs.cur_action] = reward
 
-        #Sample a transition from the replay buffer to use for auxiliary task training
         cur_observation = do_buffer_sampling()
-
-        #Update the current q-value and auxiliary task output towards their respective targets
         if cur_observation:
-            #Set the auxiliary input depending on the task
-            if a_globs.AGENT == a_globs.REDUNDANT:
-                aux_input = cur_state_coded
-            else:
-                aux_input = format_state_actions(cur_observation.states, cur_observation.actions)
-
-            if a_globs.AGENT == a_globs.REWARD:
-                #We make the rewards positive since we care only about the binary
-                #distinction between zero and non zero rewards and theano binary
-                #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([abs(cur_observation.reward)])
-            elif a_globs.AGENT == a_globs.STATE :
-                aux_target = format_state(cur_observation.next_state)
-            elif a_globs.AGENT == a_globs.NOISE:
-                aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
-            elif a_globs.AGENT == a_globs.REDUNDANT:
-                nested_q_vals = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
-                aux_target = np.array([item for sublist in nested_q_vals for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
-            a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
-
-        #Update the neural network without auxiliary input, since the buffer is not yet full
-        #TODO: decide what to do if the buffer isnot yet full
-        # else:
-        #     aux_target = set_up_empty_aux_input()
-        #     a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
+            do_auxiliary_learning(cur_observation, cur_state_coded, q_vals)
 
     return
 
@@ -333,6 +286,41 @@ def get_max_action_aux(state):
     q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_coded], axis=1), batch_size=1)
 
     return np.argmax(q_vals[0])
+
+
+def do_auxiliary_learning(cur_observation, cur_state_coded, target):
+    "Update the weights for the auxiliary network based on the current agent type given the current encoded state, observation, and learning target"
+
+    if RL_num_episodes() % 100 == 0:
+        is_verbose = 1
+    else:
+        is_verbose = 0
+
+    #Set the auxiliary input depending on the task
+    if a_globs.AGENT == a_globs.REDUNDANT:
+        aux_input = cur_state_coded
+    else:
+        aux_input = format_state_actions(cur_observation.states, cur_observation.actions)
+
+    if a_globs.AGENT == a_globs.REWARD:
+        #We make the rewards positive since we care only about the binary
+        #distinction between zero and non zero rewards and theano binary
+        #cross entropy loss requires targets to be 0 or 1
+        aux_target = np.array([abs(cur_observation.reward)])
+    elif a_globs.AGENT == a_globs.STATE :
+        aux_target = format_state(cur_observation.next_state)
+    elif a_globs.AGENT == a_globs.NOISE:
+        aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
+    elif a_globs.AGENT == a_globs.REDUNDANT:
+        nested_target = [target for i in range(a_globs.NUM_REDUNDANT_TASKS)]
+        aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
+    a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : target, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
+
+
+    #TODO: decide what to do if the buffer isnot yet full
+    # else:
+    #     aux_target = set_up_empty_aux_input()
+    #     a_globs.model.fit(np.concatenate([aux_input, cur_state_coded], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
 
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
