@@ -31,15 +31,7 @@ else:
     mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-
-#TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
-GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-#AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
-AUX_AGENTS = []
-#AGENTS = ['random', 'tabularQ', 'neural']
-AGENTS = ['neural']
-VALID_MOVE_SETS = [4, 8, 9]
-
+###### HELPER FUNCTIONS START ##############
 def do_plotting(suffix=0):
     if RESULTS_FILE_NAME:
         print("Saving the results...")
@@ -64,10 +56,20 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
+###### HELPER FUNCTIONS END #################
+
+#TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
+GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
+AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
+#AUX_AGENTS = []
+AGENTS = ['random', 'tabularQ', 'neural']
+#AGENTS = ['neural']
+VALID_MOVE_SETS = [4, 8, 9]
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
-    parser.add_argument('-run', nargs='?', type=int, default=25, help='The number of independent runs per agent. Default value = 25.')
+    parser.add_argument('-run', nargs='?', type=int, default=5, help='The number of independent runs per agent. Default value = 5.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
     parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.1, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.1')
@@ -79,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
     parser.add_argument('--name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
+    parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
 
     args = parser.parse_args()
 
@@ -111,6 +114,7 @@ if __name__ == "__main__":
 
     EPSILON = args.e
     IS_STOCHASTIC = args.stochastic
+    IS_1_HOT = args.hot
     NUM_ACTIONS = args.actions
     IS_SPARSE = args.sparse
     RESULTS_FILE_NAME = args.name
@@ -139,9 +143,9 @@ if __name__ == "__main__":
 
             #Send the agent and environment parameters to use for the current run
             if cur_agent in AUX_AGENTS:
-                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC}
+                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
             else:
-                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC}
+                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
             enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
             RL_agent_message(json.dumps(agent_params))
             RL_env_message(json.dumps(enviro_params))
