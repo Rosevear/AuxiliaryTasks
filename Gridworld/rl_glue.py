@@ -140,8 +140,6 @@ def RL_step():
     global last_action, total_reward, num_steps, num_episodes
     result = environment.env_step(last_action)
     total_reward += result['reward'];
-    #print(last_action)
-    #print(result)
     if result['isTerminal'] == True:
         num_episodes += 1
         agent.agent_end(result['reward'])
@@ -220,8 +218,8 @@ def RL_episode(max_steps_this_episode):
         rl_step_result = RL_step()
         is_terminal = rl_step_result['isTerminal']
 
-        # if (num_steps == (max_steps_this_episode)):
-            # print 'not ended'
+        if (num_steps == (max_steps_this_episode)):
+            print 'not ended'
 
     return is_terminal
 
