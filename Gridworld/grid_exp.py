@@ -60,7 +60,8 @@ def merge_two_dicts(x, y):
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
+#AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
+AUX_AGENTS = ['reward', 'state']
 #AUX_AGENTS = []
 AGENTS = ['random', 'tabularQ', 'neural']
 #AGENTS = ['neural']
@@ -69,7 +70,7 @@ VALID_MOVE_SETS = [4, 8, 9]
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
-    parser.add_argument('-run', nargs='?', type=int, default=5, help='The number of independent runs per agent. Default value = 5.')
+    parser.add_argument('-run', nargs='?', type=int, default=11, help='The number of independent runs per agent. Default value = 5.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
     parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.1, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.1')
@@ -104,7 +105,7 @@ if __name__ == "__main__":
         IS_SWEEP = True
         alpha_params = [0.1, 0.01, 0.001]
         gamma_params = GAMMA = [0.95]
-        replay_context_sizes =  [3]
+        replay_context_sizes =  [0, 1, 3]
 
     else:
         IS_SWEEP = False

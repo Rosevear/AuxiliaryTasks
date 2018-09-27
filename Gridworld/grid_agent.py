@@ -10,6 +10,7 @@ import pickle
 import random
 import json
 import platform
+import copy
 
 from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Input, concatenate
@@ -53,6 +54,7 @@ def agent_init():
 
         rms = RMSprop(lr=a_globs.ALPHA)
         a_globs.model.compile(loss='mse', optimizer=rms)
+        summarize_model()
 
     else:
 
@@ -103,12 +105,7 @@ def agent_init():
         loss_weights = {'main_output': 1.0, 'aux_output': 1.0}
         a_globs.model = Model(inputs=main_input, outputs=[main_output, aux_output])
         a_globs.model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
-
-        #Save a visual and textual summary of the a_globs.model
-        plot_model(a_globs.model, to_file='{} agent a_globs.model.png'.format(a_globs.AGENT), show_shapes=True)
-        with open('{} agent a_globs.model.txt'.format(a_globs.AGENT), 'w') as model_summary_file:
-            # Pass the file handle in as a lambda function to make it callable
-            a_globs.model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
+        summarize_model()
 
 
 def agent_start(state):
@@ -269,6 +266,14 @@ def get_max_action(state):
     cur_state_formatted = format_states([state])
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
     return np.argmax(q_vals[0])
+
+def summarize_model():
+    "Save a visual and textual summary of the current neural network model"
+
+    plot_model(a_globs.model, to_file='{} agent a_globs.model.png'.format(a_globs.AGENT), show_shapes=True)
+    with open('{} agent a_globs.model.txt'.format(a_globs.AGENT), 'w') as model_summary_file:
+        # Pass the file handle in as a lambda function to make it callable
+        a_globs.model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
 
 
 def get_max_action_tabular(state):
@@ -473,13 +478,14 @@ def coordinate_states_encoding(states):
     We also turn the bare list representation into a numpy array to use with the network
     """
 
+    states_copy = copy.deepcopy(states)
     for i in range(len(states)):
-        states[i][0] += 1
-        states[i][1] += 1
+        states_copy[i][0] += 1
+        states_copy[i][1] += 1
 
     #flatten the states list
-    states = [coordinate for state in states for coordinate in state]
-    formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
+    states_copy = [coordinate for state in states_copy for coordinate in state]
+    formatted_states = np.array(states_copy).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 
     return formatted_states
 
@@ -490,13 +496,15 @@ def coordinate_states_actions_encoding(states, actions):
     We also turn the bare list representation into a numpy array to use with the network
     """
 
-    for i in range(len(states)):
-        states[i][0] += 1
-        states[i][1] += 1
-        actions[i] += 1
+    states_copy = copy.deepcopy(states)
+    actions_copy = copy.deepcopy(actions)
+    for i in range(len(states_copy)):
+        states_copy[i][0] += 1
+        states_copy[i][1] += 1
+        actions_copy[i] += 1
 
     #flatten the states list
-    states = [coordinate for state in states for coordinate in state]
-    formatted_state_actions = np.array(states + actions).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
+    states_copy = [coordinate for state in states_copy for coordinate in state]
+    formatted_state_actions = np.array(states_copy + actions_copy).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
 
     return formatted_state_actions
