@@ -407,7 +407,7 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     Which buffer is sampled is dependent on the current time step, and done in a
     way so as to sample equally from both buffers throughout an episode"
     """
-    if buffer_two is None or RL_num_steps() % 2 == 0:
+    if buffer_two is None or rand_un() <= 0.50:
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]
     else:
         cur_observation = buffer_two[rand_in_range(len(buffer_two))]
