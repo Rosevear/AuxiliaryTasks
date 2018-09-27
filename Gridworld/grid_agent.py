@@ -78,8 +78,10 @@ def agent_init():
         elif a_globs.AGENT == a_globs.STATE :
             num_outputs = a_globs.FEATURE_VECTOR_SIZE
             cur_activation = 'softmax'
-            #TODO: Need to update the loss for when the state is represented as x, y co-ordinates
-            loss={'main_output': 'mean_squared_error', 'aux_output': 'categorical_crossentropy'}
+            if a_globs.IS_1_HOT:
+                loss={'main_output': 'mean_squared_error', 'aux_output': 'categorical_crossentropy'}
+            else:
+                loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
         elif a_globs.AGENT == a_globs.REDUNDANT:
             num_outputs = a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS
