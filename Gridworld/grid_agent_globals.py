@@ -20,14 +20,14 @@ FEATURE_VECTOR_SIZE = None
 AUX_FEATURE_VECTOR_SIZE = None
 
 #Used for sampling in the auxiliary tasks
-BUFFER_SIZE = 10
+BUFFER_SIZE = 2000
 
 #Number of output nodes used in the noisy and redundant auxiliary tasks, respectively
 NUM_NOISE_NODES = 10
 NUM_REDUNDANT_TASKS = 5
 
 #The number of times to run the auxiliary task during a single time step
-SAMPLES_PER_STEP = 1
+#SAMPLES_PER_STEP = 1
 
 #Agents: non auxiliary task based
 RANDOM = 'random'
@@ -46,6 +46,7 @@ state_action_values = None
 observed_state_action_pairs = None
 observed_states = None
 model = None
+model2 = None
 cur_epsilon = None
 zero_reward_buffer = None
 zero_buffer_count = None

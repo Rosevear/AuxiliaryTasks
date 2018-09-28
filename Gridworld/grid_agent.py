@@ -28,10 +28,6 @@ else:
     mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-#TODO: Refactor some of the neural network and auxiliary task code to reduce duplication
-#TODO: Refactor the update exeprience replay code to reduce duplication
-#TODO: Make the input type a user set parameter and then use functional programming to set which function is used to format the state
-
 def agent_init():
 
     a_globs.cur_epsilon = a_globs.EPSILON
@@ -54,7 +50,7 @@ def agent_init():
 
         rms = RMSprop(lr=a_globs.ALPHA)
         a_globs.model.compile(loss='mse', optimizer=rms)
-        summarize_model()
+        summarize_model(a_globs.model, a_globs.AGENT)
 
     else:
 
@@ -107,7 +103,21 @@ def agent_init():
         loss_weights = {'main_output': 1.0, 'aux_output': 1.0}
         a_globs.model = Model(inputs=main_input, outputs=[main_output, aux_output])
         a_globs.model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
-        summarize_model()
+        summarize_model(a_globs.model, a_globs.AGENT)
+
+        #Specify a copy for predicting Q-value without aux input
+        init_weights = he_normal()
+        main_input =  Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
+
+        shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights)(main_input)
+        main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
+        main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
+
+        #Initialize the model
+        rms = RMSprop(lr=a_globs.ALPHA)
+        a_globs.model2 = Model(inputs=main_input, outputs=main_output)
+        a_globs.model2.compile(optimizer=rms, loss='mse')
+        summarize_model(a_globs.model2, a_globs.AGENT)
 
 
 def agent_start(state):
@@ -125,7 +135,8 @@ def agent_start(state):
         elif a_globs.AGENT == a_globs.RANDOM:
             a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
         else:
-            a_globs.cur_action = get_max_action_aux(a_globs.cur_state)
+            q_vals = get_q_vals_aux(a_globs.cur_state)
+            a_globs.cur_action = get_q_vals_aux(a_globs.cur_state)
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
     return a_globs.cur_action
@@ -174,11 +185,9 @@ def agent_step(reward, state):
     else:
 
         update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
-        aux_dummy = set_up_empty_aux_input()
-        next_state_formatted = format_states([next_state])
 
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-        q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, next_state_formatted], axis=1), batch_size=1)
+        q_vals = get_q_vals_aux(next_state)
         q_max = np.max(q_vals)
         cur_action_target = reward + (a_globs.GAMMA * q_max)
 
@@ -188,14 +197,14 @@ def agent_step(reward, state):
         else:
             next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
-        #Get the learning target q-value for the current state
-        cur_state_formatted = format_states([a_globs.cur_state])
-        q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_formatted], axis=1), batch_size=1)
-        q_vals[0][a_globs.cur_action] = cur_action_target
-
         cur_observation = do_buffer_sampling()
         if cur_observation:
-            do_auxiliary_learning(cur_observation, cur_state_formatted, q_vals)
+
+            #Get the learning target q-value for the current state
+            q_vals = get_q_vals_aux(a_globs.cur_state)
+            q_vals[0][a_globs.cur_action] = cur_action_target
+
+            do_auxiliary_learning(cur_observation, a_globs.cur_state, q_vals)
 
 
     a_globs.cur_state = next_state
@@ -221,14 +230,14 @@ def agent_end(reward):
     else:
         update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, a_globs.GOAL_STATE)
 
-        #Get the Q-value for the current state
-        aux_dummy = set_up_empty_aux_input()
-        cur_state_formatted = format_states([a_globs.cur_state])
-        q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_formatted], axis=1), batch_size=1)
-        q_vals[0][a_globs.cur_action] = reward
-
         cur_observation = do_buffer_sampling()
         if cur_observation:
+
+            #Get the Q-value for the current state
+            cur_state_formatted = format_states([a_globs.cur_state])
+            get_q_vals_aux(next_state_formatted)
+            q_vals[0][a_globs.cur_action] = reward
+
             do_auxiliary_learning(cur_observation, cur_state_formatted, q_vals)
 
     return
@@ -269,13 +278,13 @@ def get_max_action(state):
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
     return np.argmax(q_vals[0])
 
-def summarize_model():
+def summarize_model(model, agent):
     "Save a visual and textual summary of the current neural network model"
 
-    plot_model(a_globs.model, to_file='{} agent a_globs.model.png'.format(a_globs.AGENT), show_shapes=True)
-    with open('{} agent a_globs.model.txt'.format(a_globs.AGENT), 'w') as model_summary_file:
+    plot_model(model, to_file='{} agent model.png'.format(agent), show_shapes=True)
+    with open('{} agent model.txt'.format(agent), 'w') as model_summary_file:
         # Pass the file handle in as a lambda function to make it callable
-        a_globs.model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
+        model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
 
 
 def get_max_action_tabular(state):
@@ -293,17 +302,24 @@ def get_max_action_tabular(state):
     next_action = max_indices[rand_in_range(len(max_indices))]
     return next_action
 
-def get_max_action_aux(state):
+def get_q_vals_aux(state):
     "Return the maximum acton to take given the current state"
 
     aux_dummy = set_up_empty_aux_input()
     cur_state_formatted = format_states([state])
     q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_formatted], axis=1), batch_size=1)
 
-    return np.argmax(q_vals[0])
+    # first_layer_weights = a_globs.model1.layers[0].get_weights()
+    # second_layer_weights = a_globs.model1.layers[1].get_weights()
+    #
+    # a_globs.model2.layers[0].set_weights(first_layer_weights)
+    # a_globs.model2.layers[1].set_weights(second_layer_weights)
+    # q_vals = a_globs.model2.predict(cur_state_formatted, axis=1, batch_size=1)
+
+    return q_vals
 
 
-def do_auxiliary_learning(cur_observation, cur_state_formatted, target):
+def do_auxiliary_learning(cur_observation, cur_state, target):
     "Update the weights for the auxiliary network based on the current agent type given the current encoded state, observation, and learning target"
 
     if RL_num_episodes() % 100 == 0:
@@ -313,7 +329,7 @@ def do_auxiliary_learning(cur_observation, cur_state_formatted, target):
 
     #Set the auxiliary input depending on the task
     if a_globs.AGENT == a_globs.REDUNDANT:
-        aux_input = cur_state_formatted
+        aux_input = format_states([cur_state])
     else:
         aux_input = format_states_actions(cur_observation.states, cur_observation.actions)
 
@@ -329,13 +345,9 @@ def do_auxiliary_learning(cur_observation, cur_state_formatted, target):
     elif a_globs.AGENT == a_globs.REDUNDANT:
         nested_target = [target for i in range(a_globs.NUM_REDUNDANT_TASKS)]
         aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
+
+    cur_state_formatted = format_states([cur_state])
     a_globs.model.fit(np.concatenate([aux_input, cur_state_formatted], axis=1), {'main_output' : target, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
-
-
-    #TODO: decide what to do if the buffer isnot yet full
-    # else:
-    #     aux_target = set_up_empty_aux_input()
-    #     a_globs.model.fit(np.concatenate([aux_input, cur_state_formatted], axis=1), {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=1)
 
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
@@ -392,22 +404,21 @@ def do_buffer_sampling():
     "Determine from which buffer to sample, if any, based on the agent and environment type"
 
     cur_observation = None
-    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE:
+    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and len(a_globs.non_zero_reward_buffer) == a_globs.BUFFER_SIZE and a_globs.AGENT != a_globs.STATE:
         cur_observation = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
     elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer:
+        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer and len(a_globs.deterministic_state_buffer) == a_globs.BUFFER_SIZE and len(a_globs.stochastic_state_buffer) == a_globs.BUFFER_SIZE * 1/10:
             cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer)
     elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer:
+        if a_globs.deterministic_state_buffer and len(a_globs.deterministic_state_buffer) == a_globs.BUFFER_SIZE:
             cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
 
     return cur_observation
 
 def sample_from_buffers(buffer_one, buffer_two=None):
     """
-    Sample a transiton uniformly at random from one of buffer_one and buffer_two.
-    Which buffer is sampled is dependent on the current time step, and done in a
-    way so as to sample equally from both buffers throughout an episode"
+    Sample a transition uniformly at random from one of buffer_one and buffer_two.
+    but with even probability from each buffer
     """
     if buffer_two is None or rand_un() <= 0.50:
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]
