@@ -84,7 +84,7 @@ def agent_init():
             cur_activation = 'linear'
             loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
-        #Specify the a_globs.model
+        #Specify the main model
         init_weights = he_normal()
         if a_globs.AGENT == a_globs.REDUNDANT:
             main_input = Input(shape=(a_globs.FEATURE_VECTOR_SIZE * 2,))
@@ -100,24 +100,24 @@ def agent_init():
 
         #Initialize the model
         rms = RMSprop(lr=a_globs.ALPHA)
-        loss_weights = {'main_output': 1.0, 'aux_output': 1.0}
+        loss_weights = {'main_output': 1.0, 'aux_output': a_globs.LAMBDA}
         a_globs.model = Model(inputs=main_input, outputs=[main_output, aux_output])
         a_globs.model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
         summarize_model(a_globs.model, a_globs.AGENT)
 
         #Specify a copy for predicting Q-value without aux input
-        init_weights = he_normal()
-        main_input =  Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
-
-        shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights)(main_input)
-        main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
-        main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
-
-        #Initialize the model
-        rms = RMSprop(lr=a_globs.ALPHA)
-        a_globs.model2 = Model(inputs=main_input, outputs=main_output)
-        a_globs.model2.compile(optimizer=rms, loss='mse')
-        summarize_model(a_globs.model2, a_globs.AGENT)
+        # init_weights = he_normal()
+        # main_input =  Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
+        #
+        # shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights)(main_input)
+        # main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
+        # main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
+        #
+        # #Initialize the predictor model
+        # rms = RMSprop(lr=a_globs.ALPHA)
+        # a_globs.model2 = Model(inputs=main_input, outputs=main_output)
+        # a_globs.model2.compile(optimizer=rms, loss='mse')
+        #summarize_model(a_globs.model2, 'single task clone')
 
 
 def agent_start(state):
@@ -136,7 +136,7 @@ def agent_start(state):
             a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
         else:
             q_vals = get_q_vals_aux(a_globs.cur_state)
-            a_globs.cur_action = get_q_vals_aux(a_globs.cur_state)
+            a_globs.cur_action = np.argmax(q_vals[0])
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
     return a_globs.cur_action
@@ -267,8 +267,11 @@ def agent_message(in_message):
         a_globs.FEATURE_VECTOR_SIZE = 2
         a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
 
-    if 'N' in params:
+    #These parameters are for auxiliary tasks only, and always occur together
+    if 'N' in params and 'LAMBDA' in params:
         a_globs.N = params['N']
+        a_globs.LAMBDA = params['LAMBDA']
+
     return
 
 def get_max_action(state):
@@ -305,12 +308,16 @@ def get_max_action_tabular(state):
 def get_q_vals_aux(state):
     "Return the maximum acton to take given the current state"
 
-    aux_dummy = set_up_empty_aux_input()
     cur_state_formatted = format_states([state])
+
+    aux_dummy = set_up_empty_aux_input()
     q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_formatted], axis=1), batch_size=1)
 
-    # first_layer_weights = a_globs.model1.layers[0].get_weights()
-    # second_layer_weights = a_globs.model1.layers[1].get_weights()
+    # first_layer_weights = a_globs.model.layers[0].get_weights()
+    # second_layer_weights = a_globs.model.layers[1].get_weights()
+    #
+    # print(first_layer_weights)
+    # print(second_layer_weights)
     #
     # a_globs.model2.layers[0].set_weights(first_layer_weights)
     # a_globs.model2.layers[1].set_weights(second_layer_weights)

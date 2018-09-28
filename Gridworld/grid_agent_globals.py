@@ -8,6 +8,7 @@ OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
 
 #Parameters
 EPSILON = 1.0
+LAMBDA = None
 ALPHA = None
 GAMMA = None
 EPSILON_MIN = None

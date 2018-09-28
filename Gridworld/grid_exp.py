@@ -23,6 +23,7 @@ import numpy as np
 import platform
 from itertools import product
 from collections import namedtuple
+from math import log
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -56,6 +57,15 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
+def sample_params_log_uniform(start, end, num_samples):
+    "Randomly sample parameters from the base 10 log uniform distribution within the range start and stop"
+
+    log_uniform_start = log(start, 10)
+    log_uniform_end = log(end, 10)
+    param_logs = [log_uniform_start *  np.random.uniform(log_uniform_end / log_uniform_start, 1.0) for i in range(num_samples)]
+    params = [round(10 ** cur_log, 5) for cur_log in param_logs]
+    return params
+
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
@@ -70,9 +80,10 @@ VALID_MOVE_SETS = [4, 8, 9]
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
-    parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 5.')
+    parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
-    parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
+    parser.add_argument('-l', nargs='?', type=float, default=1.0, help=' Lambda parmaeter specifying the weighting for the auxiliary loss. Ranges from 0 to 1.0 inclusive. Default value = 1.0')
+    parser.add_argument('-e', nargs='?', type=float, default=0.001, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.001 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.1, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.1')
     parser.add_argument('-g', nargs='?', type=float, default=0.95, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=3, help='The number of states to use in the auxiliary prediction tasks. Default n = 3') #TODO: MAKE THIS DEFAULT #
@@ -86,8 +97,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.e < 0 or args.e > 1 or args.a < 0 or args.a > 1 or args.g < 0 or args.g > 1:
-        exit("Epsilon, Alpha, and Gamma parameters must be a value between 0 and 1, inclusive.")
+    if args.e < 0 or args.e > 1 or args.a < 0 or args.a > 1 or args.g < 0 or args.g > 1 or args.l < 0 or args.l > 1:
+        exit("Epsilon, Alpha, Gamma, Lambda parameters must be a value between 0 and 1, inclusive.")
 
     if args.actions not in VALID_MOVE_SETS:
         exit("The valid move sets are 4, 8, and 9. Please choose one of those.")
@@ -102,16 +113,24 @@ if __name__ == "__main__":
 
     #Agent and environment parameters, and experiment settings
     if args.sweep:
+        np.random.seed(0)
+        random.seed(0)
+
         IS_SWEEP = True
-        alpha_params = [0.1, 0.01, 0.001]
-        #0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0},
+        alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = GAMMA = [0.95]
-        replay_context_sizes =  [0, 1, 3]
+        #lambda_params = sample_params_log_uniform(0.001, 1, 6)
+        lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10]
+        replay_context_sizes =  [3]
+
+        print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
+        print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
 
     else:
         IS_SWEEP = False
         alpha_params = [args.a]
         gamma_params = [args.g]
+        lambda_params = [args.l]
         replay_context_sizes = [args.n]
 
     EPSILON = args.e
@@ -126,26 +145,26 @@ if __name__ == "__main__":
     num_runs = args.run
 
     #The main experiment loop
-    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes))
+    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
     for param_setting in all_params:
         cur_agent = param_setting[0]
         if cur_agent in AUX_AGENTS:
-            print("Training agent: {} with alpha = {} gamma = {} and buffer size = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3]))
+            print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
         else:
             print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
 
         cur_param_results = []
-        for run in range(num_runs):
+        for run in range(1, num_runs + 1):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
             np.random.seed(run)
             random.seed(run)
 
             #Send the agent and environment parameters to use for the current run
             if cur_agent in AUX_AGENTS:
-                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
+                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
             else:
                 agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
             enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
@@ -164,10 +183,14 @@ if __name__ == "__main__":
         all_results.append(cur_param_results)
         all_param_settings.append(param_setting)
 
+        #print(all_param_settings)
+        #print("BREAK")
+        #print(all_results)
+
     #Process and plot the results
     if IS_SWEEP:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
-        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes))
+        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
         best_agent_results = {}
         avg_results = []
@@ -196,8 +219,9 @@ if __name__ == "__main__":
             print(agent)
             print(best_agent_results[agent].data)
             episodes = [episode for episode in range(num_episodes)]
+            print(best_agent_results[agent].params)
             if agent in AUX_AGENTS:
-                plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3])))
+                plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[4])))
             else:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
             i += 1
@@ -223,7 +247,7 @@ if __name__ == "__main__":
                 print(best_agent_results[agent].data)
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
-                    plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3])))
+                    plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3]), str(cur_param_setting_result[agent].params[4])))
                 else:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2])))
                 i += 1
@@ -242,7 +266,11 @@ if __name__ == "__main__":
 
         for i in range(len(avg_results)):
             cur_data = [episode for episode in range(num_episodes)]
-            plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}".format(str(all_param_settings[i][0]), str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][0]))
+            cur_agent = str(all_param_settings[i][0])
+            if cur_agent in AUX_AGENTS:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
+            else:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
         setup_plot()
         do_plotting()
 
