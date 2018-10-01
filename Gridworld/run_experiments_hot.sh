@@ -11,5 +11,5 @@ python grid_exp.py --sweep --stochastic --sparse --name "stochastic sparse gridw
 echo "All experiments completed!"
 mkdir ResultsHot
 mkdir ResultsHot/model_summaries
-mv *.txt ResultsHot/model_summaries
-mv *.png ResultsHot
+mv *hot.txt ResultsHot/model_summaries
+mv *hot.png ResultsHot

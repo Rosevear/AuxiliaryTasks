@@ -291,8 +291,13 @@ def get_max_action(state):
 def summarize_model(model, agent):
     "Save a visual and textual summary of the current neural network model"
 
-    plot_model(model, to_file='{} agent model.png'.format(agent), show_shapes=True)
-    with open('{} agent model.txt'.format(agent), 'w') as model_summary_file:
+    if a_globs.IS_1_HOT:
+        suffix = 'hot'
+    else:
+        suffix = 'coord'
+
+    plot_model(model, to_file='{} agent model {}.png'.format(agent, suffix), show_shapes=True)
+    with open('{} agent model {}.txt'.format(agent, suffix), 'w') as model_summary_file:
         # Pass the file handle in as a lambda function to make it callable
         model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
 

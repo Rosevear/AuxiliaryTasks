@@ -119,9 +119,11 @@ if __name__ == "__main__":
 
         IS_SWEEP = True
         alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
+        alpha_params = [1]
         gamma_params = GAMMA = [0.95]
         #lambda_params = sample_params_log_uniform(0.001, 1, 6)
         lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10]
+        #lambda_params = [1]
         replay_context_sizes =  [3]
 
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
