@@ -59,7 +59,7 @@ def agent_init():
         a_globs.zero_reward_buffer = []
 
         a_globs.deterministic_state_buffer = []
-        a_globs.stochastic_state_buffer_count = []
+        a_globs.stochastic_state_buffer = []
 
         if a_globs.AGENT == a_globs.REWARD:
             num_outputs = 1
@@ -91,8 +91,8 @@ def agent_init():
         else:
             main_input = Input(shape=(a_globs.FEATURE_VECTOR_SIZE + (a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N),))
 
-        shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights)(main_input)
-        main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
+        shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights, name='shared_1')(main_input)
+        main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights, name='main_task_full_layer')(shared_1)
         aux_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
 
         main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
@@ -107,17 +107,17 @@ def agent_init():
 
         #Specify a copy for predicting Q-value without aux input
         # init_weights = he_normal()
-        # main_input =  Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
+        # clone_input =  Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
         #
-        # shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights)(main_input)
-        # main_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights)(shared_1)
-        # main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
+        # shared_1 = Dense(164, activation='relu', kernel_initializer=init_weights, name='clone_1')(clone_input)
+        # clone_task_full_layer = Dense(150, activation='relu', kernel_initializer=init_weights, name='clonse_2')(shared_1)
+        # clone_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='clone_output')(clone_task_full_layer)
         #
         # #Initialize the predictor model
         # rms = RMSprop(lr=a_globs.ALPHA)
-        # a_globs.model2 = Model(inputs=main_input, outputs=main_output)
+        # a_globs.model2 = Model(inputs=clone_input, outputs=clone_output)
         # a_globs.model2.compile(optimizer=rms, loss='mse')
-        #summarize_model(a_globs.model2, 'single task clone')
+        # summarize_model(a_globs.model2, 'single task clone')
 
 
 def agent_start(state):
@@ -175,6 +175,10 @@ def agent_step(reward, state):
         q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
         q_vals[0][a_globs.cur_action] = cur_action_target
 
+        # print(a_globs.cur_state)
+        # print('cur q vals')
+        # print(q_vals)
+
         #Update the weights
         a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
@@ -203,6 +207,10 @@ def agent_step(reward, state):
             #Get the learning target q-value for the current state
             q_vals = get_q_vals_aux(a_globs.cur_state)
             q_vals[0][a_globs.cur_action] = cur_action_target
+
+            # print(a_globs.cur_state)
+            # print('cur q vals')
+            # print(q_vals)
 
             do_auxiliary_learning(cur_observation, a_globs.cur_state, q_vals)
 
@@ -234,11 +242,10 @@ def agent_end(reward):
         if cur_observation:
 
             #Get the Q-value for the current state
-            cur_state_formatted = format_states([a_globs.cur_state])
-            get_q_vals_aux(next_state_formatted)
+            q_vals = get_q_vals_aux(a_globs.cur_state)
             q_vals[0][a_globs.cur_action] = reward
 
-            do_auxiliary_learning(cur_observation, cur_state_formatted, q_vals)
+            do_auxiliary_learning(cur_observation, a_globs.cur_state, q_vals)
 
     return
 
@@ -313,15 +320,18 @@ def get_q_vals_aux(state):
     aux_dummy = set_up_empty_aux_input()
     q_vals, _ = a_globs.model.predict(np.concatenate([aux_dummy, cur_state_formatted], axis=1), batch_size=1)
 
-    # first_layer_weights = a_globs.model.layers[0].get_weights()
-    # second_layer_weights = a_globs.model.layers[1].get_weights()
-    #
-    # print(first_layer_weights)
-    # print(second_layer_weights)
-    #
-    # a_globs.model2.layers[0].set_weights(first_layer_weights)
-    # a_globs.model2.layers[1].set_weights(second_layer_weights)
-    # q_vals = a_globs.model2.predict(cur_state_formatted, axis=1, batch_size=1)
+    # first_layer_weights = a_globs.model.get_layer('shared_1').get_weights()
+    # second_layer_weights = a_globs.model.get_layer('main_task_full_layer').get_weights()
+    # last_layer_weights = a_globs.model.get_layer('main_output').get_weights()
+
+    #print(first_layer_weights)
+    #print(second_layer_weights)
+    #print(last_layer_weights)
+
+    # a_globs.model2.set_weights(first_layer_weights + second_layer_weights + last_layer_weights)
+    # #print(cur_state_formatted.shape)
+    # a_globs.model2.get_layer('clone_input')
+    # q_vals = a_globs.model2.predict(cur_state_formatted, batch_size=1)
 
     return q_vals
 
@@ -411,13 +421,13 @@ def do_buffer_sampling():
     "Determine from which buffer to sample, if any, based on the agent and environment type"
 
     cur_observation = None
-    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and len(a_globs.non_zero_reward_buffer) == a_globs.BUFFER_SIZE and a_globs.AGENT != a_globs.STATE:
+    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE:
         cur_observation = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
     elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer and len(a_globs.deterministic_state_buffer) == a_globs.BUFFER_SIZE and len(a_globs.stochastic_state_buffer) == a_globs.BUFFER_SIZE * 1/10:
+        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer:
             cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer)
     elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer and len(a_globs.deterministic_state_buffer) == a_globs.BUFFER_SIZE:
+        if a_globs.deterministic_state_buffer:
             cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
 
     return cur_observation
@@ -431,6 +441,15 @@ def sample_from_buffers(buffer_one, buffer_two=None):
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]
     else:
         cur_observation = buffer_two[rand_in_range(len(buffer_two))]
+    # print('buffer 1')
+    # print(len(buffer_one))
+    # print('buffer 2')
+    # print(len(buffer_two))
+    # print('cur obs')
+    # print(cur_observation.states)
+    # print(cur_observation.actions)
+    # print(cur_observation.reward)
+    # print(cur_observation.next_state)
     return cur_observation
 
 def set_up_empty_aux_input():
