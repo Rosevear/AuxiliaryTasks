@@ -301,10 +301,12 @@ def get_q_vals_aux(state):
 def do_auxiliary_learning(cur_state, next_state, reward):
     "Update the weights for the auxiliary network based on both the current interaction with the environment and sampling from experience replay"
 
-    if RL_num_episodes() % 100 == 0:
-        is_verbose = 1
-    else:
-        is_verbose = 0
+    # if RL_num_episodes() % 100 == 0:
+    #     is_verbose = 1
+    # else:
+    #     is_verbose = 0
+
+    is_verbose = 0
 
     #Perform direct learning on the current state and auxiliary information
     q_vals = get_q_vals_aux(cur_state)
@@ -525,38 +527,37 @@ def states_actions_encode_1_hot(states, actions):
 
 def coordinate_states_encoding(states):
     """
-    Shift the x and y coordinates that define a state value so that it starts at (1, 1), from the point of new of the neural network.
-    We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
-    We also turn the bare list representation into a numpy array to use with the network
+    Format the x, y coordinates as a numpy array
     """
 
-    states_copy = copy.deepcopy(states)
-    for i in range(len(states)):
-        states_copy[i][0] += 1
-        states_copy[i][1] += 1
+    # states_copy = list(copy.deepcopy(states))
+    # print(states_copy)
+    # for i in range(len(states)):
+    #     states_copy[i][0] += 1
+    #     states_copy[i][1] += 1
 
     #flatten the states list
-    states_copy = [coordinate for state in states_copy for coordinate in state]
-    formatted_states = np.array(states_copy).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
+    states = [coordinate for state in states for coordinate in state]
+    formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 
     return formatted_states
 
-def coordinate_states_actions_encoding(states, actions):
-    """
-    Shift the x and y coordinates that define a state value so that it starts at (1, 1), from the point of new of the neural network.
-    We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
-    We also turn the bare list representation into a numpy array to use with the network
-    """
-
-    states_copy = copy.deepcopy(states)
-    actions_copy = copy.deepcopy(actions)
-    for i in range(len(states_copy)):
-        states_copy[i][0] += 1
-        states_copy[i][1] += 1
-        actions_copy[i] += 1
-
-    #flatten the states list
-    states_copy = [coordinate for state in states_copy for coordinate in state]
-    formatted_state_actions = np.array(states_copy + actions_copy).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
-
-    return formatted_state_actions
+# def coordinate_states_actions_encoding(states, actions):
+#     """
+#     Shift the x and y coordinates that define a state value so that it starts at (1, 1), from the point of new of the neural network.
+#     We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
+#     We also turn the bare list representation into a numpy array to use with the network
+#     """
+#
+#     states_copy = list(copy.deepcopy(states))
+#     actions_copy = list(copy.deepcopy(actions))
+#     for i in range(len(states_copy)):
+#         states_copy[i][0] += 1
+#         states_copy[i][1] += 1
+#         actions_copy[i] += 1
+#
+#     #flatten the states list
+#     states_copy = [coordinate for state in states_copy for coordinate in state]
+#     formatted_state_actions = np.array(states_copy + actions_copy).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
+#
+#     return formatted_state_actions

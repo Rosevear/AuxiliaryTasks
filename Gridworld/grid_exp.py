@@ -77,6 +77,7 @@ AGENTS = ['random', 'tabularQ', 'neural']
 #AGENTS = []
 #AGENTS = ['neural']
 VALID_MOVE_SETS = [4, 8, 9]
+NUM_AUX_AGENT_PARAMS = 2
 
 if __name__ == "__main__":
 
@@ -119,12 +120,12 @@ if __name__ == "__main__":
 
         IS_SWEEP = True
         alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
-        alpha_params = [1]
+        #alpha_params = [1, 0.1]
         gamma_params = GAMMA = [0.95]
         #lambda_params = sample_params_log_uniform(0.001, 1, 6)
-        lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10]
+        lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10, 0.05]
         #lambda_params = [1]
-        replay_context_sizes =  [3]
+        replay_context_sizes =  [1]
 
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
         print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
@@ -219,10 +220,10 @@ if __name__ == "__main__":
         #Create a table to show the best parameters for each agent
         i = 0
         for agent in best_agent_results.keys():
-            print(agent)
-            print(best_agent_results[agent].data)
+            #print(agent)
+            #print(best_agent_results[agent].data)
             episodes = [episode for episode in range(num_episodes)]
-            print(best_agent_results[agent].params)
+            #print(best_agent_results[agent].params)
             if agent in AUX_AGENTS:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[4])))
             else:
@@ -231,23 +232,30 @@ if __name__ == "__main__":
         setup_plot()
         do_plotting()
 
+        print('param setting results pre merge')
+        print(param_setting_results)
+
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
         reg_agent_param_settings = list(product(alpha_params, gamma_params))
         for reg_agent_params in reg_agent_param_settings:
             for key in param_setting_results.keys():
-                if reg_agent_params != key and reg_agent_params == key[:len(key) - 1]:
+                if reg_agent_params != key and reg_agent_params == key[:len(key) - NUM_AUX_AGENT_PARAMS]:
                     param_setting_results[key] = merge_two_dicts(param_setting_results[key], param_setting_results[reg_agent_params])
             del param_setting_results[reg_agent_params]
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
+        print('param setting results post merge')
+        print(param_setting_results)
         for param_setting in param_setting_results:
             plt.clf()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
+            print('param setting keys')
+            print(cur_param_setting_result.keys())
             for agent in cur_param_setting_result.keys():
                 print(agent)
-                print(best_agent_results[agent].data)
+                print(cur_param_setting_result[agent].data)
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3]), str(cur_param_setting_result[agent].params[4])))
