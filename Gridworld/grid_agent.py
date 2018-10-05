@@ -334,7 +334,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
     elif a_globs.AGENT == a_globs.NOISE:
         aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
     elif a_globs.AGENT == a_globs.REDUNDANT:
-        nested_target = [target for i in range(a_globs.NUM_REDUNDANT_TASKS)]
+        nested_target = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
         aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
 
     cur_state_formatted = format_states([cur_state])
