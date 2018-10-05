@@ -23,6 +23,7 @@ cd project_name
 source bin/activate
 
 #Get the repository
+
 git clone https://github.com/Rosevear/AuxiliaryTasks.git
 
 #Install the dependencies via pip
@@ -44,7 +45,5 @@ python grid_exp.py ARG_OPTIONS (look in grid_exp.py at the arg parser or use the
 
 OR
 
-#Run the experiments across all agent environments and sweep the parameter settings
-
-source run_experiments.sh
+See the various bash scripts to run across varous environments and sweep the hyperparameters
 
