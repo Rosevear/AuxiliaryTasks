@@ -344,11 +344,21 @@ def do_auxiliary_learning(cur_state, next_state, reward):
     for i in range(a_globs.SAMPLES_PER_STEP):
         cur_observation = do_buffer_sampling()
         if cur_observation:
-            #NOTE: If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
+            #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
             #print('cur obs in learning')
             #print(cur_observation.states)
             most_recent_obs_state = cur_observation.states[-1]
             sampled_state_formatted = format_states([most_recent_obs_state])
+
+            #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
+            q_vals = get_q_vals_aux(cur_observation.next_state)
+            q_max = np.max(q_vals)
+            cur_action_target = reward + (a_globs.GAMMA * q_max)
+
+            #Get the learning target q-value for the current state
+            q_vals = get_q_vals_aux(most_recent_obs_state)
+            q_vals[0][a_globs.cur_action] = cur_action_target
+
             if a_globs.AGENT == a_globs.REWARD:
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
@@ -359,17 +369,9 @@ def do_auxiliary_learning(cur_state, next_state, reward):
             elif a_globs.AGENT == a_globs.NOISE:
                 aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
             elif a_globs.AGENT == a_globs.REDUNDANT:
-                nested_target = [target for i in range(a_globs.NUM_REDUNDANT_TASKS)]
+                nested_target = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
 
-            #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-            q_vals = get_q_vals_aux(cur_observation.next_state)
-            q_max = np.max(q_vals)
-            cur_action_target = reward + (a_globs.GAMMA * q_max)
-
-            #Get the learning target q-value for the current state
-            q_vals = get_q_vals_aux(most_recent_obs_state)
-            q_vals[0][a_globs.cur_action] = cur_action_target
 
             a_globs.model.fit(sampled_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
 
