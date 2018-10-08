@@ -18,7 +18,6 @@ from time import sleep
 import argparse
 import json
 import random
-import pickle
 import numpy as np
 import platform
 from itertools import product
@@ -269,24 +268,27 @@ if __name__ == "__main__":
     else:
         #Average the results over all of the runs
         avg_results = []
-        for i in range(len(all_results)):
-            avg_results.append([np.mean(run) for run in zip(*all_results[i])])
+        with open('{} results'.format(RESULTS_FILE_NAME), 'a+') as results_file:
+            for i in range(len(all_results)):
+                avg_results.append([np.mean(run) for run in zip(*all_results[i])])
 
-        print('average results')
-        print(avg_results)
+            results_file.write('average results\n')
+            results_file.write(json.dumps(avg_results))
+            results_file.write('\n')
 
-        for i in range(len(avg_results)):
-            cur_data = [episode for episode in range(num_episodes)]
-            cur_agent = str(all_param_settings[i][0])
+            for i in range(len(avg_results)):
+                cur_data = [episode for episode in range(num_episodes)]
+                cur_agent = str(all_param_settings[i][0])
 
-            print('{} agent summary statistics'.format(cur_agent))
-            print('mean: {} standard deviation: {}'.format(np.mean(avg_results[i]), np.std(avg_results[i])))
+                results_file.write('{} agent summary statistics\n'.format(cur_agent))
+                results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(avg_results[i]), np.std(avg_results[i])))
 
-            if cur_agent in AUX_AGENTS:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
-            else:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
-        setup_plot()
-        do_plotting()
+                if cur_agent in AUX_AGENTS:
+                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
+                else:
+                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
+            setup_plot()
+            do_plotting()
+            results_file.write('\n')
 
     print("Experiment completed!")

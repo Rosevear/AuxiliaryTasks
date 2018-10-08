@@ -1,0 +1,17 @@
+average results
+[[242.0, 395.0], [1000.0, 412.0], [1000.0, 70.0], [1000.0, 1000.0], [831.0, 1000.0], [1000.0, 749.0], [1000.0, 1000.0]]
+random agent summary statistics
+mean: 318.5 standard deviation: 76.5
+tabularQ agent summary statistics
+mean: 706.0 standard deviation: 294.0
+neural agent summary statistics
+mean: 535.0 standard deviation: 465.0
+reward agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+state agent summary statistics
+mean: 915.5 standard deviation: 84.5
+redundant agent summary statistics
+mean: 874.5 standard deviation: 125.5
+noise agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+
