@@ -32,6 +32,13 @@ else:
 import matplotlib.pyplot as plt
 
 ###### HELPER FUNCTIONS START ##############
+def setup_plot():
+    print("Plotting the results...")
+    plt.ylabel('Steps per episode')
+    plt.xlabel("Episode")
+    plt.axis([0, num_episodes, 0, max_steps + 1000])
+    plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+
 def do_plotting(suffix=0):
     if RESULTS_FILE_NAME:
         print("Saving the results...")
@@ -43,13 +50,6 @@ def do_plotting(suffix=0):
         print("Displaying the results...")
         plt.show()
 
-def setup_plot():
-    print("Plotting the results...")
-    plt.ylabel('Steps per episode')
-    plt.xlabel("Episode")
-    plt.axis([0, num_episodes, 0, max_steps + 1000])
-    plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-
 #Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
@@ -57,7 +57,7 @@ def merge_two_dicts(x, y):
     return z
 
 def sample_params_log_uniform(start, end, num_samples):
-    "Randomly sample parameters from the base 10 log uniform distribution within the range start and stop"
+    "Randomly sample parameters from the base 10 log uniform distribution within the range start and stop, including start but not stop"
 
     log_uniform_start = log(start, 10)
     log_uniform_end = log(end, 10)
@@ -65,13 +65,26 @@ def sample_params_log_uniform(start, end, num_samples):
     params = [round(10 ** cur_log, 5) for cur_log in param_logs]
     return params
 
+def save_results(results, cur_agent, filename='Default File Name'):
+    """
+    Compute the mean and standard deviation of the current results,
+    and save the results and statistics to the specified file
+    """
+
+    with open('{} results'.format(filename), 'a+') as results_file:
+        results_file.write('{} average results\n'.format(cur_agent))
+        results_file.write(json.dumps(results))
+        results_file.write('\n')
+        results_file.write('{} agent summary statistics\n'.format(cur_agent))
+        results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(results), np.std(results)))
+
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
-AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
-#AUX_AGENTS = []
+#AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
+AUX_AGENTS = []
 AGENTS = ['random', 'tabularQ', 'neural']
 #AGENTS = []
 #AGENTS = ['neural']
@@ -223,6 +236,9 @@ if __name__ == "__main__":
             #print(best_agent_results[agent].data)
             episodes = [episode for episode in range(num_episodes)]
             #print(best_agent_results[agent].params)
+
+            save_results(best_agent_results[agent].data, agent, RESULTS_FILE_NAME)
+
             if agent in AUX_AGENTS:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[4])))
             else:
@@ -231,8 +247,8 @@ if __name__ == "__main__":
         setup_plot()
         do_plotting()
 
-        print('param setting results pre merge')
-        print(param_setting_results)
+        # print('param setting results pre merge')
+        # print(param_setting_results)
 
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
         reg_agent_param_settings = list(product(alpha_params, gamma_params))
@@ -244,17 +260,17 @@ if __name__ == "__main__":
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
-        print('param setting results post merge')
-        print(param_setting_results)
+        # print('param setting results post merge')
+        # print(param_setting_results)
         for param_setting in param_setting_results:
             plt.clf()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
-            print('param setting keys')
-            print(cur_param_setting_result.keys())
+            # print('param setting keys')
+            # print(cur_param_setting_result.keys())
             for agent in cur_param_setting_result.keys():
-                print(agent)
-                print(cur_param_setting_result[agent].data)
+
+                save_results(cur_param_setting_result[agent].data, agent, ''.join([RESULTS_FILE_NAME, str(file_name_suffix)]))
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3]), str(cur_param_setting_result[agent].params[4])))
@@ -268,27 +284,19 @@ if __name__ == "__main__":
     else:
         #Average the results over all of the runs
         avg_results = []
-        with open('{} results'.format(RESULTS_FILE_NAME), 'a+') as results_file:
-            for i in range(len(all_results)):
-                avg_results.append([np.mean(run) for run in zip(*all_results[i])])
+        for i in range(len(all_results)):
+            avg_results.append([np.mean(run) for run in zip(*all_results[i])])
 
-            results_file.write('average results\n')
-            results_file.write(json.dumps(avg_results))
-            results_file.write('\n')
+        for i in range(len(avg_results)):
+            cur_data = [episode for episode in range(num_episodes)]
+            cur_agent = str(all_param_settings[i][0])
 
-            for i in range(len(avg_results)):
-                cur_data = [episode for episode in range(num_episodes)]
-                cur_agent = str(all_param_settings[i][0])
+            save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME)
 
-                results_file.write('{} agent summary statistics\n'.format(cur_agent))
-                results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(avg_results[i]), np.std(avg_results[i])))
-
-                if cur_agent in AUX_AGENTS:
-                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
-                else:
-                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
-            setup_plot()
-            do_plotting()
-            results_file.write('\n')
-
+            if cur_agent in AUX_AGENTS:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
+            else:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
+        setup_plot()
+        do_plotting()
     print("Experiment completed!")
