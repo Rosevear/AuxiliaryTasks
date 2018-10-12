@@ -1,5 +1,5 @@
 #Binaries for graph visualization used by Keras
-sudo apt-get install graphviz
+sudo apt-get install graphviz -y
 
 #GCC and G++ compilers
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -12,4 +12,4 @@ gcc --version
 g++ --version
 
 #Blas numerical computing library
-sudo apt install libblas-dev
+sudo apt install libblas-dev -y
