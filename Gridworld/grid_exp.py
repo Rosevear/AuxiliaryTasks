@@ -127,6 +127,7 @@ if __name__ == "__main__":
 
     #Agent and environment parameters, and experiment settings
     if args.sweep:
+        #To ensure the same parameters are sampled from on multiple invocations of the program
         np.random.seed(0)
         random.seed(0)
 
