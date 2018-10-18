@@ -1,7 +1,4 @@
-#Binaries for graph visualization used by Keras
-sudo apt-get install graphviz -y
-
-#GCC and G++ compilers
+#Install GCC and G++ compilers
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update
 sudo apt install g++-7 -y
@@ -11,5 +8,18 @@ sudo update-alternatives --config gcc
 gcc --version
 g++ --version
 
-#Blas numerical computing library
+#Install the Blas numerical computing library
 sudo apt install libblas-dev -y
+
+#Binaries for graph visualization used by Keras
+sudo apt-get install graphviz -y
+
+#Create virtual environment and navigate to it, and activate it
+virtualenv AUX
+cd AUX
+source bin/activate
+
+#Clone the repo, enter it, and install python dependencies
+git clone https://github.com/Rosevear/AuxiliaryTasks.git
+cd Auxiliary-Tasks
+python pip install -r requirements.txt
