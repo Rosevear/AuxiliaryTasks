@@ -15,7 +15,7 @@ import copy
 from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Input, concatenate
 from keras.initializers import he_normal
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 
 from rl_glue import RL_num_episodes, RL_num_steps
@@ -48,8 +48,7 @@ def agent_init():
         a_globs.model.add(Dense(150, activation='relu', kernel_initializer=init_weights))
         a_globs.model.add(Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights))
 
-        rms = RMSprop(lr=a_globs.ALPHA)
-        a_globs.model.compile(loss='mse', optimizer=rms)
+        a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
         summarize_model(a_globs.model, a_globs.AGENT)
 
     else:
@@ -95,10 +94,9 @@ def agent_init():
         aux_output = Dense(num_outputs, activation=cur_activation, kernel_initializer=init_weights, name='aux_output')(aux_task_full_layer)
 
         #Initialize the model
-        rms = RMSprop(lr=a_globs.ALPHA)
         loss_weights = {'main_output': 1.0, 'aux_output': a_globs.LAMBDA}
         a_globs.model = Model(inputs=main_input, outputs=[main_output, aux_output])
-        a_globs.model.compile(optimizer=rms, loss=loss, loss_weights=loss_weights)
+        a_globs.model.compile(optimizer=Adam(lr=a_globs.ALPHA), loss=loss, loss_weights=loss_weights)
         summarize_model(a_globs.model, a_globs.AGENT)
 
 
