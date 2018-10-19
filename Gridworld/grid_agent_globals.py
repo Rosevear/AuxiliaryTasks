@@ -30,6 +30,9 @@ NUM_REDUNDANT_TASKS = 5
 #The number of times to run the auxiliary task during a single time step
 SAMPLES_PER_STEP = 1
 
+#How long to wait before updating the target networks
+NUM_STEPS_TO_UPDATE = 1
+
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'
 
@@ -52,7 +55,7 @@ state_action_values = None
 observed_state_action_pairs = None
 observed_states = None
 model = None
-model2 = None
+target_network = None
 cur_epsilon = None
 zero_reward_buffer = None
 zero_buffer_count = None

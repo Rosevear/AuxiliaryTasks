@@ -12,7 +12,7 @@ import json
 import platform
 import copy
 
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
 from keras.initializers import he_normal
 from keras.optimizers import RMSprop, Adam
@@ -50,6 +50,10 @@ def agent_init():
 
         a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
         summarize_model(a_globs.model, a_globs.AGENT)
+
+        #Create the target network
+        a_globs.target_network = clone_model(a_globs.model)
+        a_globs.target_network.set_weights(a_globs.model.get_weights())
 
     else:
 
@@ -99,6 +103,10 @@ def agent_init():
         a_globs.model.compile(optimizer=Adam(lr=a_globs.ALPHA), loss=loss, loss_weights=loss_weights)
         summarize_model(a_globs.model, a_globs.AGENT)
 
+        #Create the target network to use in the update rule
+        a_globs.target_network = clone_model(a_globs.model)
+        a_globs.target_network.set_weights(a_globs.model.get_weights())
+
 
 def agent_start(state):
 
@@ -115,7 +123,7 @@ def agent_start(state):
         elif a_globs.AGENT == a_globs.RANDOM:
             a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
         else:
-            q_vals = get_q_vals_aux(a_globs.cur_state)
+            q_vals = get_q_vals_aux(a_globs.cur_state, False)
             a_globs.cur_action = np.argmax(q_vals[0])
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
@@ -138,19 +146,24 @@ def agent_step(reward, state):
         a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward + a_globs.GAMMA * a_globs.state_action_values[next_state[0]][next_state[1]][next_state_max_action] - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
 
     elif a_globs.AGENT == a_globs.NEURAL:
-        #Get the best action over all actions possible in the next state, ie max_a(Q, a)
+
         next_state_formatted = format_states([next_state])
-        q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
-        q_max = np.max(q_vals)
-        cur_action_target = reward + a_globs.GAMMA * q_max
 
         #Choose the next action, epsilon greedy style
         if rand_un() < 1 - a_globs.cur_epsilon:
+            #Get the best action over all actions possible in the next state, max_a(Q(s + 1), a))
+            q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
             next_action = np.argmax(q_vals)
         else:
             next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
-        #Get the value for the current state of the action which was just taken ie Q(S, A)
+        #Get the target value for the update from the target network
+        q_vals = a_globs.target_network.predict(next_state_formatted, batch_size=1)
+        cur_action_target = reward + a_globs.GAMMA * np.max(q_vals)
+
+        #Get the value for the current state of the action which was just taken, ie Q(S, A),
+        #and set the target for the specifc action taken (we need to pass in the
+        #whole vector of q_values, since our network takes state and action as input)
         cur_state_formatted = format_states([a_globs.cur_state])
         q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
         q_vals[0][a_globs.cur_action] = cur_action_target
@@ -162,6 +175,9 @@ def agent_step(reward, state):
         #Update the weights
         a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
+        if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
+            update_target_network()
+
     elif a_globs.AGENT == a_globs.RANDOM:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
@@ -169,28 +185,20 @@ def agent_step(reward, state):
     else:
 
         update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
-
-        #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-        q_vals = get_q_vals_aux(next_state)
-        q_max = np.max(q_vals)
-        cur_action_target = reward + (a_globs.GAMMA * q_max)
+        next_state_formatted = format_states([next_state])
 
         #Choose the next action, epsilon greedy style
         if rand_un() < 1 - a_globs.cur_epsilon:
+            #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
+            q_vals = get_q_vals_aux(next_state, False)
             next_action = np.argmax(q_vals)
         else:
             next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
-        #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-        q_vals = get_q_vals_aux(next_state)
-        q_max = np.max(q_vals)
-        cur_action_target = reward + (a_globs.GAMMA * q_max)
-
-        #Get the learning target q-value for the current state
-        q_vals = get_q_vals_aux(a_globs.cur_state)
-        q_vals[0][a_globs.cur_action] = cur_action_target
-
         do_auxiliary_learning(a_globs.cur_state, next_state, reward)
+
+        if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
+            update_target_network()
 
 
     a_globs.cur_state = next_state
@@ -251,6 +259,11 @@ def agent_message(in_message):
 
     return
 
+def update_target_network():
+    "Updates the network currently being used as the target so that it reflects the current network that is learning"
+
+    a_globs.target_network.set_weights(a_globs.model.get_weights())
+
 def get_max_action(state):
     "Return the maximum action to take given the current state"
 
@@ -287,11 +300,14 @@ def get_max_action_tabular(state):
     next_action = max_indices[rand_in_range(len(max_indices))]
     return next_action
 
-def get_q_vals_aux(state):
-    "Return the maximum acton to take given the current state"
+def get_q_vals_aux(state, use_target_network):
+    "Return the maximum action to take given the current state. If use_target_netowkr is True the results will come from that network"
 
     cur_state_formatted = format_states([state])
-    q_vals, _ = a_globs.model.predict(np.concatenate([cur_state_formatted], axis=1), batch_size=1)
+    if use_target_network:
+        q_vals, _ = a_globs.target_network.predict(np.concatenate([cur_state_formatted], axis=1), batch_size=1)
+    else:
+        q_vals, _ = a_globs.model.predict(np.concatenate([cur_state_formatted], axis=1), batch_size=1)
 
     return q_vals
 
@@ -307,12 +323,11 @@ def do_auxiliary_learning(cur_state, next_state, reward):
     is_verbose = 0
 
     #Perform direct learning on the current state and auxiliary information
-    q_vals = get_q_vals_aux(cur_state)
+    q_vals = get_q_vals_aux(cur_state, False)
     if next_state:
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-        q_vals_next = get_q_vals_aux(next_state)
-        q_max = np.max(q_vals_next)
-        cur_action_target = reward + (a_globs.GAMMA * q_max)
+        q_vals_next = get_q_vals_aux(next_state, True)
+        cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals_next))
         q_vals[0][a_globs.cur_action] = cur_action_target
 
     else:
@@ -327,7 +342,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         if next_state:
             aux_target = format_states([next_state])
         else:
-            #If there is no next state represent the lack of such a state with the zeor vector (since 1 hot encoding or shifted x y coordinates will not use this to refer to any actual state)
+            #If there is no next state represent the lack of such a state with the zero vector (since 1 hot encoding or shifted x y coordinates will not use this to refer to any actual state)
             aux_target = np.zeros(shape=(1, a_globs.FEATURE_VECTOR_SIZE,))
     elif a_globs.AGENT == a_globs.NOISE:
         aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
@@ -349,12 +364,11 @@ def do_auxiliary_learning(cur_state, next_state, reward):
             sampled_state_formatted = format_states([most_recent_obs_state])
 
             #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
-            q_vals = get_q_vals_aux(cur_observation.next_state)
-            q_max = np.max(q_vals)
-            cur_action_target = reward + (a_globs.GAMMA * q_max)
+            q_vals = get_q_vals_aux(cur_observation.next_state, True)
+            cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals))
 
             #Get the learning target q-value for the current state
-            q_vals = get_q_vals_aux(most_recent_obs_state)
+            q_vals = get_q_vals_aux(most_recent_obs_state, False)
             q_vals[0][a_globs.cur_action] = cur_action_target
 
             if a_globs.AGENT == a_globs.REWARD:
