@@ -20,23 +20,22 @@ NUM_ACTIONS = 4
 FEATURE_VECTOR_SIZE = None
 AUX_FEATURE_VECTOR_SIZE = None
 
-#Used for sampling in the auxiliary tasks
-BUFFER_SIZE = 2000
-
 #Number of output nodes used in the noisy and redundant auxiliary tasks, respectively
 NUM_NOISE_NODES = 10
 NUM_REDUNDANT_TASKS = 5
 
-#The number of times to run the auxiliary task during a single time step
-SAMPLES_PER_STEP = 1
+#Used for sampling in the auxiliary tasks
+BUFFER_SIZE = 2000
+BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
+
+#The number of times sample from the rexperience eplay buffer per time step
+SAMPLES_PER_STEP = 10
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1
 
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'
-
-BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #Agents: non auxiliary task based
 RANDOM = 'random'
@@ -65,6 +64,7 @@ deterministic_state_buffer = None
 deterministic_state_buffer_count = None
 stochastic_state_buffer = None
 stochastic_state_buffer_count = None
+generic_buffer = None
 cur_state = None
 cur_action = None
 cur_context = None

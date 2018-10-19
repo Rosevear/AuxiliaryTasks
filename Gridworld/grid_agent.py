@@ -40,6 +40,9 @@ def agent_init():
         a_globs.state_action_values = [[[0 for action in range(a_globs.NUM_ACTIONS)] for column in range(a_globs.NUM_COLUMNS)] for row in range(a_globs.NUM_ROWS)]
     elif a_globs.AGENT == a_globs.NEURAL:
 
+        #Initialize a generic replay buffers
+        a_globs.generic_buffer = []
+
         #Initialize the neural network
         a_globs.model = Sequential()
         init_weights = he_normal()
@@ -67,7 +70,7 @@ def agent_init():
         if a_globs.AGENT == a_globs.REWARD:
             num_outputs = 1
             cur_activation = 'sigmoid'
-            loss={'main_output': 'mean_squared_error', 'aux_output': 'binary_crossentropy'}
+            loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
         elif a_globs.AGENT == a_globs.NOISE:
             num_outputs = a_globs.NUM_NOISE_NODES
@@ -147,6 +150,7 @@ def agent_step(reward, state):
 
     elif a_globs.AGENT == a_globs.NEURAL:
 
+        update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
         next_state_formatted = format_states([next_state])
 
         #Choose the next action, epsilon greedy style
@@ -168,12 +172,44 @@ def agent_step(reward, state):
         q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
         q_vals[0][a_globs.cur_action] = cur_action_target
 
-        # print(a_globs.cur_state)
-        # print('cur q vals')
-        # print(q_vals)
 
         #Update the weights
         a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
+
+        #Check and see if the relevant buffer is non-empty
+        #TODO: Putan actual lenght check here instead of just sampling from the buffer
+        observation_present = do_buffer_sampling()
+        if observation_present and a_globs.SAMPLES_PER_STEP > 0:
+
+            #print('I am replay buffer!')
+            #Create the target training batch
+            # batch_inputs = np.zeros(shape=(a_globs.SAMPLES_PER_STEP, a_globs.FEATURE_VECTOR_SIZE,))
+            # batch_targets = np.zeros(shape=(a_globs.SAMPLES_PER_STEP, a_globs.NUM_ACTIONS))
+
+            #Use the replay buffer to learn from previously visited states
+            for i in range(a_globs.SAMPLES_PER_STEP):
+                cur_observation = do_buffer_sampling()
+                #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
+                #print('cur obs in learning')
+                #print(cur_observation.states)
+                most_recent_obs_state = cur_observation.states[-1]
+                sampled_state_formatted = format_states([most_recent_obs_state])
+                sampled_next_state_formatted = format_states([cur_observation.next_state])
+
+                #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
+                q_vals = a_globs.target_network.predict(sampled_next_state_formatted, batch_size=1)
+                cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals))
+
+                #Get the q_vals to adjust the learning target for the current action taken
+                q_vals = a_globs.model.predict(sampled_state_formatted, batch_size=1)
+                q_vals[0][a_globs.cur_action] = cur_action_target
+
+                # batch_inputs[i] = sampled_state_formatted
+                # batch_targets[i] = q_vals
+
+                # print(sampled_state_formatted)
+                # print(q_vals)
+                a_globs.model.fit(sampled_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
         if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
             update_target_network()
@@ -315,11 +351,6 @@ def get_q_vals_aux(state, use_target_network):
 def do_auxiliary_learning(cur_state, next_state, reward):
     "Update the weights for the auxiliary network based on both the current interaction with the environment and sampling from experience replay"
 
-    # if RL_num_episodes() % 100 == 0:
-    #     is_verbose = 1
-    # else:
-    #     is_verbose = 0
-
     is_verbose = 0
 
     #Perform direct learning on the current state and auxiliary information
@@ -337,7 +368,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         #We make the rewards positive since we care only about the binary
         #distinction between zero and non zero rewards and theano binary
         #cross entropy loss requires targets to be 0 or 1
-        aux_target = np.array([abs(reward)])
+        aux_target = np.array([reward])
     elif a_globs.AGENT == a_globs.STATE :
         if next_state:
             aux_target = format_states([next_state])
@@ -351,13 +382,21 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
 
     cur_state_formatted = format_states([cur_state])
-    a_globs.model.fit(cur_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
+    a_globs.model.fit(cur_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
+
 
     #Use the replay buffer to learn from previously visitied states
-    for i in range(a_globs.SAMPLES_PER_STEP):
-        cur_observation = do_buffer_sampling()
-        if cur_observation:
-            #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
+    test_observation = do_buffer_sampling()
+    if test_observation and a_globs.SAMPLES_PER_STEP > 0:
+
+        #Create the target training batch
+        # batch_inputs = np.array([np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object)), np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object))])
+        # bath_targets = np.array([np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object)), np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object))])
+
+        for i in range(a_globs.SAMPLES_PER_STEP):
+            cur_observation = do_buffer_sampling()
+            #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state
+            #(effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular single task case)
             #print('cur obs in learning')
             #print(cur_observation.states)
             most_recent_obs_state = cur_observation.states[-1]
@@ -375,7 +414,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([abs(cur_observation.reward)])
+                aux_target = np.array([cur_observation.reward])
             elif a_globs.AGENT == a_globs.STATE :
                 aux_target = format_states([cur_observation.next_state])
             elif a_globs.AGENT == a_globs.NOISE:
@@ -383,7 +422,6 @@ def do_auxiliary_learning(cur_state, next_state, reward):
             elif a_globs.AGENT == a_globs.REDUNDANT:
                 nested_target = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
                 aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
-
 
             a_globs.model.fit(sampled_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
 
@@ -397,7 +435,8 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
     #Construct the historical context used in the prediciton tasks, and store them in the replay buffer according to their reward valence
     a_globs.cur_context.append(cur_state)
     a_globs.cur_context_actions.append(cur_action)
-    if len(a_globs.cur_context) == a_globs.N:
+    if len(a_globs.cur_context) == a_globs.N or a_globs.AGENT == a_globs.NEURAL:
+        #print('update buffer!')
 
         #print('before pop')
         #print(a_globs.cur_context)
@@ -409,11 +448,15 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
         #print('after pop')
         #print(a_globs.cur_context)
 
-        if a_globs.AGENT == a_globs.STATE :
+        if a_globs.AGENT == a_globs.STATE:
             if  cur_observation.states[-1] in a_globs.OBSTACLE_STATES:
                 add_to_buffer(a_globs.stochastic_state_buffer, cur_observation)
             else:
                 add_to_buffer(a_globs.deterministic_state_buffer, cur_observation)
+
+        elif a_globs.AGENT == a_globs.NEURAL:
+            #print('ADD for neural!')
+            add_to_buffer(a_globs.generic_buffer, cur_observation)
         else:
             if reward == 0:
                 add_to_buffer(a_globs.zero_reward_buffer, cur_observation)
@@ -456,6 +499,9 @@ def do_buffer_sampling():
     elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
         if a_globs.deterministic_state_buffer:
             cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
+    elif a_globs.generic_buffer:
+        cur_observation = sample_from_buffers(a_globs.generic_buffer)
+
 
     return cur_observation
 
@@ -478,18 +524,6 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     # print(cur_observation.reward)
     # print(cur_observation.next_state)
     return cur_observation
-
-# def set_up_empty_aux_input():
-#     """
-#     Sets up empty auxiliary input of the correct dimensions and returns it.
-#     Used for when predicting the main output of networks with auxiliary tasks
-#     """
-#
-#     if a_globs.AGENT == a_globs.REDUNDANT:
-#         aux_input = np.zeros(shape=(1, a_globs.FEATURE_VECTOR_SIZE,))
-#     else:
-#         aux_input = np.zeros(shape=(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N,))
-#     return aux_input
 
 def format_states(states):
     "Format the states according to the user defined input (1 hot encoding or (x, y) coordinates)"
@@ -514,10 +548,8 @@ def format_states_actions(states, actions):
 def states_encode_1_hot(states):
     "Return a one hot encoding of the current list of states"
 
-    #print(states)
     all_states_1_hot = []
     for state in states:
-    #    print(state)
         state_1_hot = np.zeros((a_globs.NUM_ROWS, a_globs.NUM_COLUMNS))
         state_1_hot[state[0]][state[1]] = 1
         state_1_hot = state_1_hot.reshape(1, a_globs.FEATURE_VECTOR_SIZE)
@@ -544,34 +576,19 @@ def coordinate_states_encoding(states):
     Format the x, y coordinates as a numpy array
     """
 
-    # states_copy = list(copy.deepcopy(states))
-    # print(states_copy)
-    # for i in range(len(states)):
-    #     states_copy[i][0] += 1
-    #     states_copy[i][1] += 1
-
     #flatten the states list
     states = [coordinate for state in states for coordinate in state]
     formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 
     return formatted_states
 
-# def coordinate_states_actions_encoding(states, actions):
-#     """
-#     Shift the x and y coordinates that define a state value so that it starts at (1, 1), from the point of new of the neural network.
-#     We do this so that (0, 0) can be used as dummy auxiliary input when we want to predict just Q-vals from the multi-task neural network
-#     We also turn the bare list representation into a numpy array to use with the network
-#     """
-#
-#     states_copy = list(copy.deepcopy(states))
-#     actions_copy = list(copy.deepcopy(actions))
-#     for i in range(len(states_copy)):
-#         states_copy[i][0] += 1
-#         states_copy[i][1] += 1
-#         actions_copy[i] += 1
-#
-#     #flatten the states list
-#     states_copy = [coordinate for state in states_copy for coordinate in state]
-#     formatted_state_actions = np.array(states_copy + actions_copy).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
-#
-#     return formatted_state_actions
+def coordinate_states_actions_encoding(states, actions):
+    """
+    Formt the x,y coordinate and action as a numpy array
+    """
+
+    #flatten the states list
+    states = [coordinate for state in states for coordinate in state]
+    formatted_state_actions = np.array(states + actions).reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE * a_globs.N)
+
+    return formatted_state_actions
