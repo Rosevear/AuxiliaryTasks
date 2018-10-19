@@ -89,7 +89,7 @@ class TestGridEnv(unittest.TestCase):
         grid_env.env_step(2)
         self.assertEqual(e_globs.current_state, [0, 0])
 
-        current_state = [0, 0]
+        e_globs.current_state  = [0, 0]
         grid_env.env_step(3)
         self.assertEqual(e_globs.current_state, [0, 0])
 
@@ -107,5 +107,26 @@ class TestGridEnv(unittest.TestCase):
         self.assertFalse(e_globs.IS_SPARSE)
 
 
+# def print_environment():
+#     """
+#     Print a graphical depiction of the environment in the agent is navigating.
+#     Where X's signifiy open spaces and O's signify obstacles.
+#     """
+
+    # print("Printing a display of the discrete gridworld environment")
+    # for row in range(e_globs.MAX_ROW, 0, -1):
+    #     cur_row_display = ''
+    #     for column in range(e_globs.MAX_COLUMN, 0, -1):
+    #         cur_state = [row, column]
+    #         if cur_state in e_globs.OBSTACLE_STATES:
+    #             cur_row_display += 'O'
+    #         else:
+    #             cur_row_display += 'X'
+    #     print(cur_row_display)
+
 if __name__ == '__main__':
+    #print_environment() TODO: Debug this
+    print("Running tests for discrete gridworld environment...")
+    np.random.seed(0)
+    random.seed(0)
     unittest.main()

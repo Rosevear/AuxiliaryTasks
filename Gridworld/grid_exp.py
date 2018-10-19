@@ -85,7 +85,7 @@ GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
-AGENTS = ['random', 'tabularQ', 'neural']
+AGENTS = ['random', 'neural']
 #AGENTS = []
 #AGENTS = ['neural']
 VALID_MOVE_SETS = [4, 8, 9]
@@ -102,7 +102,8 @@ if __name__ == "__main__":
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. Default n = 1') #TODO: MAKE THIS DEFAULT #
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
-    parser.add_argument('--windy', action='store_true', help='Specify whether to use a single step or multistep agent.')
+    parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment')
+    parser.add_argument('--continuous', action='store_true', help='Specify whether to use the continuous gridworld environment')
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
     parser.add_argument('--name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
@@ -121,8 +122,14 @@ if __name__ == "__main__":
         RLGlue("windy_grid_env", "grid_agent")
     else:
         if args.actions != 4:
-            exit("The only valid action set for the non-windy gridworld is 4 moves.")
-        RLGlue("grid_env", "grid_agent")
+            exit("The only valid action set for the all non-windy gridworlds is 4 moves.")
+        if args.continuous:
+            if args.stochastic or args.hot:
+                exit("The continuous gridoworld environment does not support stochastic obstacle states nor 1-hot vector encodings")
+            else:
+                RLGlue("continuous_grid_env", "grid_agent")
+        else:
+            RLGlue("grid_env", "grid_agent")
 
 
     #Agent and environment parameters, and experiment settings
