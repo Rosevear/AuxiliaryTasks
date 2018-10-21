@@ -1,6 +1,4 @@
 #Constants, per run
-#TODO: Move these to environment file
-#ToDO: maybe just merge agent and enviro globals in one file them in one
 NUM_ROWS = 6
 NUM_COLUMNS = 9
 GOAL_STATE = (5, 8)
@@ -25,11 +23,11 @@ NUM_NOISE_NODES = 10
 NUM_REDUNDANT_TASKS = 5
 
 #Used for sampling in the auxiliary tasks
-BUFFER_SIZE = 2000
+BUFFER_SIZE = 1000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #The number of times sample from the rexperience eplay buffer per time step
-SAMPLES_PER_STEP = 10
+SAMPLES_PER_STEP = 9
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1

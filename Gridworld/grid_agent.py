@@ -167,7 +167,7 @@ def agent_step(reward, state):
 
         #Get the value for the current state of the action which was just taken, ie Q(S, A),
         #and set the target for the specifc action taken (we need to pass in the
-        #whole vector of q_values, since our network takes state and action as input)
+        #whole vector of q_values, since our network takes state only as input)
         cur_state_formatted = format_states([a_globs.cur_state])
         q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
         q_vals[0][a_globs.cur_action] = cur_action_target
@@ -177,7 +177,7 @@ def agent_step(reward, state):
         a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
         #Check and see if the relevant buffer is non-empty
-        #TODO: Putan actual lenght check here instead of just sampling from the buffer
+        #TODO: Put an actual length check here instead of just sampling from the buffer
         observation_present = do_buffer_sampling()
         if observation_present and a_globs.SAMPLES_PER_STEP > 0:
 
@@ -189,12 +189,24 @@ def agent_step(reward, state):
             #Use the replay buffer to learn from previously visited states
             for i in range(a_globs.SAMPLES_PER_STEP):
                 cur_observation = do_buffer_sampling()
+                # print('states')
+                # print(cur_observation.states)
+                # print('actions')
+                # print(cur_observation.actions)
+                # print('reward')
+                # print(cur_observation.reward)
+                # print('next state')
+                # print(cur_observation.next_state)
                 #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
                 #print('cur obs in learning')
                 #print(cur_observation.states)
                 most_recent_obs_state = cur_observation.states[-1]
                 sampled_state_formatted = format_states([most_recent_obs_state])
                 sampled_next_state_formatted = format_states([cur_observation.next_state])
+                print('sampled_state_formatted')
+                print(sampled_state_formatted)
+                print('sample state next formatted')
+                print(sampled_next_state_formatted)
 
                 #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
                 q_vals = a_globs.target_network.predict(sampled_next_state_formatted, batch_size=1)
@@ -319,7 +331,6 @@ def summarize_model(model, agent):
     with open('{} agent model {}.txt'.format(agent, suffix), 'w') as model_summary_file:
         # Pass the file handle in as a lambda function to make it callable
         model.summary(print_fn=lambda x: model_summary_file.write(x + '\n'))
-
 
 def get_max_action_tabular(state):
     "Return the maximum action to take given the current state."

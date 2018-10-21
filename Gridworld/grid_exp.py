@@ -81,14 +81,22 @@ def save_results(results, cur_agent, filename='Default File Name'):
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
-GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 #AUX_AGENTS = ['reward', 'state']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = ['neural']
+AGENTS = ['neural', 'random']
+
+#Environments
+ORIGINAL = "grid"
+CONTINUOUS = 'continuous'
+WINDY = 'windy'
+
+#MISC
+GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
 VALID_MOVE_SETS = [4, 8, 9]
 NUM_AUX_AGENT_PARAMS = 2
+
 
 if __name__ == "__main__":
 
@@ -100,12 +108,13 @@ if __name__ == "__main__":
     parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. This is currently disabled, and will default to n = 1')
+    parser.add_argument('-env', choices={"grid", "continuous", "windy"}, type=str, default="grid", help='Which environment to train the agent on. Options are: "grid", "continuous", "windy". Default is env = "grid"')
+    parser.add_argument('-name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
     parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment')
     parser.add_argument('--continuous', action='store_true', help='Specify whether to use the continuous gridworld environment')
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
-    parser.add_argument('--name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
 
@@ -117,19 +126,13 @@ if __name__ == "__main__":
     if args.actions not in VALID_MOVE_SETS:
         exit("The valid move sets are 4, 8, and 9. Please choose one of those.")
 
-    if args.windy:
-        RLGlue("windy_grid_env", "grid_agent")
-    else:
-        if args.actions != 4:
-            exit("The only valid action set for the all non-windy gridworlds is 4 moves.")
-        if args.continuous:
-            if args.stochastic or args.hot:
-                exit("The continuous gridoworld environment does not support stochastic obstacle states nor 1-hot vector encodings")
-            else:
-                RLGlue("continuous_grid_env", "grid_agent")
-        else:
-            RLGlue("grid_env", "grid_agent")
+    if args.env == WINDY and args.actions != 4:
+        exit("The only valid action set for all non-windy gridworlds is 4 moves.")
+    elif args.continuous and (args.stochastic or args.hot):
+        exit("The continuous gridworld environment does not support stochastic obstacle states, nor 1-hot vector encodings")
 
+    else:
+        print('Running the {} environment'.format(args.env))
 
     #Agent and environment parameters, and experiment settings
     if args.sweep:
@@ -144,7 +147,7 @@ if __name__ == "__main__":
         #lambda_params = sample_params_log_uniform(0.001, 1, 6)
         lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10, 0.05]
         #lambda_params = [1]
-        replay_context_sizes =  [1]
+        replay_context_sizes = [1]
 
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
         print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
@@ -174,6 +177,12 @@ if __name__ == "__main__":
     print("Starting the experiment...")
     for param_setting in all_params:
         cur_agent = param_setting[0]
+
+        #Load the appropriate agent and environment files
+        #TODO: dynamically load the appropriate agent file to better separate the code
+        #TODO: import from the globals file using the same statement type as above before splitting to other files
+        RLGlue("{}_env".format(args.env), "grid_agent")
+
         if cur_agent in AUX_AGENTS:
             print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
         else:
