@@ -36,7 +36,7 @@ def agent_start(state):
     a_globs.cur_state = state
 
     #Choose the next action, epislon-greedy style
-    if rand_un() < 1 - a_globs.EPSILON:
+    if rand_un() < 1 - a_globs.cur_epsilon:
         actions = [approx_value(a_globs.cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)]
         a_globs.cur_action = actions.index(max(actions))
     else:
@@ -56,7 +56,7 @@ def agent_step(reward, state):
         a_globs.e_trace[0][index] = 1
 
     #Choose the next action, epislon-greedy style
-    if rand_un() < 1 - a_globs.EPSILON:
+    if rand_un() < 1 - a_globs.cur_epsilon:
         actions = [approx_value(a_globs.cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)]
         next_action = actions.index(max(actions))
     else:
