@@ -57,8 +57,8 @@ def do_plotting(suffix=0):
 def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suffix=0):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
-    np.random.seed(0)
-    random.seed(0)
+    np.random.seed(6)
+    random.seed(6)
     print('param settings')
     print(param_settings)
     for setting in param_settings:
@@ -138,7 +138,7 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.RANDOM, a_globs.SARSA_LAMBDA]
+AGENTS = [a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 

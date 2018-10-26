@@ -30,8 +30,6 @@ def compute_state_action_values_discrete():
     x_values = np.empty((1, max_x_val))
     y_values = np.empty((1, max_y_val))
 
-    # x_values = [x for x in range(max_x_val)]
-    # y_values = [y for y in range(max_y_val)]
     plot_values = np.empty((max_x_val, max_y_val))
     print(a_globs.AGENT)
     print('plot shape')
@@ -45,7 +43,7 @@ def compute_state_action_values_discrete():
             if a_globs.AGENT == a_globs.TABULAR:
                 #State action table is int[row, column] format
                 best_action_val = -max([a_globs.state_action_values[y][x][action] for action in range(a_globs.NUM_ACTIONS)])
-            elif a_globs.AGENT == a_globs.SARSA:
+            elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
                 best_action_val = -max([approx_value(cur_state, action, weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
@@ -76,6 +74,7 @@ def compute_state_action_values_continuous(plot_range):
 
     x_values = np.empty((1, plot_range))
     y_values = np.empty((1, plot_range))
+    plot_values = np.empty((plot_range, plot_range))
 
     for x in range(plot_range):
         scaled_x = a_globs.MIN_COLUMN + (x * (a_globs.MAX_COLUMN - a_globs.MIN_COLUMN) / plot_range)
@@ -84,8 +83,8 @@ def compute_state_action_values_continuous(plot_range):
             cur_state = [scaled_y, scaled_x]
             if a_globs.AGENT == a_globs.RANDOM:
                 pass
-            elif a_globs.AGENT == a_globs.SARSA:
-                best_action_val = -max([approx_value(cur_state, action, weights)[0] for action in range(a_globs.NUM_ACTIONS)])
+            elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
+                best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
                 best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))
