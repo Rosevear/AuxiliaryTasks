@@ -15,7 +15,7 @@ EPSILON_MIN = None
 N = None
 
 #For Sarsa agent specifically
-SARSA_LAMBDA = 0.90
+TRACE = 0.90
 NUM_TILINGS = 8
 IHT_SIZE = 4096
 
@@ -47,7 +47,7 @@ COORD_SUFFIX = 'coord'
 RANDOM = 'random'
 NEURAL = 'neural'
 TABULAR = 'tabular'
-SARSA = 'sarsa'
+SARSA_LAMBDA = 'sarsa_lambda'
 
 #Agents: auxiliary task based
 REWARD = 'reward'

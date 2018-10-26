@@ -14,6 +14,7 @@
 from __future__ import division
 from rl_glue import *  # Required for RL-Glue
 from Globals.generic_globals import *
+import Globals.grid_agent_globals as a_globs
 
 import argparse
 import json
@@ -126,7 +127,7 @@ def send_params(cur_agent, param_setting):
     if cur_agent in AUX_AGENTS:
         agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
     else:
-        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
+        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "TRACE": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
     enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
     RL_agent_message(json.dumps(agent_params))
     RL_env_message(json.dumps(enviro_params))
@@ -134,32 +135,18 @@ def send_params(cur_agent, param_setting):
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
-#TODO: dynamically load the appropriate agent file to better separate the code
-#TODO: look into moving the agent helpers into their own module and importing them as needed
-#TODO: Look into using import all on global files to avoid having to prefix everything
-
-#Directory locations for the agents and environments
-AGENT_DIR = 'Agents'
-ENV_DIR = 'Environments'
-
-AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
-#AUX_AGENTS = ['reward', 'state']
-#AUX_AGENTS = []
+#AUX_AGENTS = [', 'state', 'redundant', 'noise']
+AUX_AGENTS = []
 #AGENTS = []
-AGENTS = []
-
-#MISC
-GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
-VALID_MOVE_SETS = [4, 8, 9]
-NUM_AUX_AGENT_PARAMS = 2
-
+AGENTS = [a_globs.RANDOM, a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
-    parser.add_argument('-l', nargs='?', type=float, default=1.0, help=' Lambda parmaeter specifying the weighting for the auxiliary loss. Ranges from 0 to 1.0 inclusive. Default value = 1.0')
+    parser.add_argument('-l', nargs='?', type=float, default=1.0, help='Lambda parameter specifying the weighting for the auxiliary loss. Ranges from 0 to 1.0 inclusive. Default value = 1.0')
+    parser.add_argument('-t', nargs='?', type=float, default=0.90, help='Parameter specifying the eligibility trace for sarsa lambda. Ranges from 0.0 to 1.0, inclusive. Default value = 0.90')
     parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
@@ -178,8 +165,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     #Validate user arguments
-    if args.e < 0 or args.e > 1 or args.a < 0 or args.a > 1 or args.g < 0 or args.g > 1 or args.l < 0 or args.l > 1:
-        exit("Epsilon, Alpha, Gamma, Lambda parameters must be a value between 0 and 1, inclusive.")
+    float_params = [args.e, args.a, args.g, args.l, args.t]
+    for param in float_params:
+        if param < 0.0 or param > 1.0:
+            exit("Epsilon, Alpha, Gamma, Lambda, and Eligibility trace, parameters must be a value between 0 and 1, inclusive.")
 
     if args.actions not in VALID_MOVE_SETS:
         exit("The valid move sets are 4, 8, and 9. Please choose one of those.")
@@ -205,6 +194,7 @@ if __name__ == "__main__":
         #lambda_params = sample_params_log_uniform(0.001, 1, 6)
         lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10, 0.05]
         #lambda_params = [1]
+        trace_params = [0.90]
         replay_context_sizes = [1]
 
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
@@ -216,6 +206,7 @@ if __name__ == "__main__":
         gamma_params = [args.g]
         lambda_params = [args.l]
         replay_context_sizes = [args.n]
+        trace_params = [args.t]
 
     EPSILON = args.e
     IS_STOCHASTIC = args.stochastic
@@ -229,7 +220,7 @@ if __name__ == "__main__":
     num_runs = args.run
 
     #The main experiment loop
-    all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
+    all_params = list(product(AGENTS, alpha_params, gamma_params, trace_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
@@ -247,7 +238,7 @@ if __name__ == "__main__":
         if cur_agent in AUX_AGENTS:
             print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
         else:
-            print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
+            print("Training agent: {} with alpha = {} gamma = {} trace = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3]))
 
         cur_param_results = []
         for run in range(1, num_runs + 1):
@@ -277,7 +268,7 @@ if __name__ == "__main__":
     #Process and plot the results
     if IS_SWEEP:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
-        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
+        all_params_no_agent = list(product(alpha_params, gamma_params, trace_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
         best_agent_results = {}
         avg_results = []
@@ -312,7 +303,7 @@ if __name__ == "__main__":
 
             if agent in AUX_AGENTS:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[4])))
-            else:
+            elif agent == a_globs.SARSA_LAMBDA:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
             i += 1
         setup_plot()
@@ -345,6 +336,8 @@ if __name__ == "__main__":
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3]), str(cur_param_setting_result[agent].params[4])))
+                elif cur_agent == a_globs.SARSA_LAMBDA:
+                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), str(all_param_settings[i][3])))
                 else:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2])))
                 i += 1
@@ -366,6 +359,8 @@ if __name__ == "__main__":
 
             if cur_agent in AUX_AGENTS:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
+            elif cur_agent == a_globs.SARSA_LAMBDA:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), str(all_param_settings[i][3])))
             else:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
         setup_plot()

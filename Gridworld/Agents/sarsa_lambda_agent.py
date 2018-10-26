@@ -66,7 +66,7 @@ def agent_step(reward, state):
     for index in next_state_feature_indices:
         delta = delta + a_globs.GAMMA * a_globs.weights[0][index]
     a_globs.weights += (a_globs.ALPHA / a_globs.NUM_TILINGS) * delta * a_globs.e_trace
-    a_globs.e_trace = a_globs.GAMMA * a_globs.SARSA_LAMBDA * a_globs.e_trace
+    a_globs.e_trace = a_globs.GAMMA * a_globs.TRACE * a_globs.e_trace
 
     a_globs.cur_state = next_state
     a_globs.cur_action = next_action
@@ -106,6 +106,7 @@ def agent_message(in_message): # returns string, in_message: string
         a_globs.EPSILON_MIN = params["EPSILON"]
         a_globs.ALPHA = params['ALPHA']
         a_globs.GAMMA = params['GAMMA']
+        a_globs.TRACE = params['TRACE']
         a_globs.AGENT = params['AGENT']
         a_globs.IS_STOCHASTIC = params['IS_STOCHASTIC']
         a_globs.IS_1_HOT = params['IS_1_HOT']
