@@ -15,9 +15,9 @@ EPSILON_MIN = None
 N = None
 
 #For Sarsa agent specifically
-SARSA_LAMBDA = None
-NUM_TILINGS = None
-IHT_SIZE = None
+SARSA_LAMBDA = 0.90
+NUM_TILINGS = 8
+IHT_SIZE = 4096
 
 IS_STOCHASTIC = None
 IS_1_HOT = None
@@ -58,13 +58,26 @@ AGENT = None
 
 ENV = None
 
-#Variables
+#General Variables
+cur_epsilon = None
+cur_state = None
+cur_action = None
+cur_context = None
+
+#Neural network singel task
+generic_buffer = None
+
+#Sarsa lambda agent
+weights = None
+iht = None
+e_trace = None
+
+#Variables: Auxiliary Neural Networks
 state_action_values = None
 observed_state_action_pairs = None
 observed_states = None
 model = None
 target_network = None
-cur_epsilon = None
 zero_reward_buffer = None
 zero_buffer_count = None
 non_zero_reward_buffer = None
@@ -73,8 +86,4 @@ deterministic_state_buffer = None
 deterministic_state_buffer_count = None
 stochastic_state_buffer = None
 stochastic_state_buffer_count = None
-generic_buffer = None
-cur_state = None
-cur_action = None
-cur_context = None
 cur_context_actions = None

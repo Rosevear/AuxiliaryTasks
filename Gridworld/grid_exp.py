@@ -142,11 +142,11 @@ def send_params(cur_agent, param_setting):
 AGENT_DIR = 'Agents'
 ENV_DIR = 'Environments'
 
-#AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
+AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 #AUX_AGENTS = ['reward', 'state']
-AUX_AGENTS = []
+#AUX_AGENTS = []
 #AGENTS = []
-AGENTS = ['neural']
+AGENTS = []
 
 #MISC
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
@@ -237,7 +237,12 @@ if __name__ == "__main__":
         cur_agent = param_setting[0]
 
         #Load the appropriate agent and environment files
-        RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+        if cur_agent in AGENTS:
+            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+        elif cur_agent in AUX_AGENTS:
+            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.aux_agent".format(AGENT_DIR))
+        else:
+            exit('ERROR: Invalid agent string provided!')
 
         if cur_agent in AUX_AGENTS:
             print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))

@@ -372,15 +372,15 @@ def compute_state_action_values_discrete():
 def compute_state_action_values_continuous(plot_range):
     "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
 
-    plot_values = []
-    x_values = []
-    y_values = []
+    max_x_val = a_globs.MAX_COLUMN + 1
+    max_y_val = a_globs.MAX_ROW + 1
+
+    x_values = np.empty((1, plot_range))
+    y_values = np.empty((1, plot_range))
+
     for x in range(plot_range):
         scaled_x = a_globs.MIN_COLUMN + (x * (a_globs.MAX_COLUMN - a_globs.MIN_COLUMN) / plot_range)
         for y in range(plot_range):
-            #TODO: Check if we have to call the tile coder directly: the scaling
-            #code below might be like what is already done internally in approx value
-            #instead of just being a way to cycle through valid state values
             scaled_y = a_globs.MIN_ROW + (y * (a_globs.MAX_ROW - a_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]
             if a_globs.AGENT == a_globs.RANDOM:
@@ -391,11 +391,23 @@ def compute_state_action_values_continuous(plot_range):
                 cur_state_formatted = format_states([cur_state])
                 best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))
 
-            x_values.append(scaled_x)
-            y_values.append(scaled_y)
-            plot_values.append(best_action_val)
+            #x_values.append(x)
+            #print('y value shape')
+            #print(y_values.shape)
+            #y_values.append(y)
+            y_values[0][y] = y
+            # print(best_action_val)
+            # print(plot_values)
+            plot_values[x][y] = best_action_val
+            # print('x_values')
+            # print(x_values)
+            # print('y_values')
+            # print(y_values)
+            # print('plot_values')
+            # print(plot_values)
+        x_values[0][x] = x
+    return x_values, np.transpose(y_values), np.transpose(plot_values)
 
-    return np.array(x_values)[:, np.newaxis], np.array(y_values)[:, np.newaxis], np.array(plot_values)[:, np.newaxis]
 
 def approx_value(state, action, weights):
     global iht
