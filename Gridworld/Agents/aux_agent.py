@@ -6,7 +6,6 @@ import Globals.grid_agent_globals as a_globs
 from Globals.generic_globals import *
 
 from Utils.utils import rand_in_range, rand_un
-from Utils.tiles3 import IHT, tiles
 from Utils.agent_helpers import *
 from rl_glue import RL_num_episodes, RL_num_steps
 from collections import namedtuple

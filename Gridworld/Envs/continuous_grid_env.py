@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 from __future__ import division
-from utils import rand_norm, rand_in_range, rand_un
+
+import Globals.continuous_grid_env_globals as e_globs
+from Utils.utils import rand_norm, rand_in_range, rand_un
+
 import numpy as np
 import json
-import continuous_grid_env_globals as e_globs
 
 def env_init():
     return

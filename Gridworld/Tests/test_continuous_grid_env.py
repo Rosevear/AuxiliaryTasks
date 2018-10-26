@@ -1,10 +1,11 @@
 import unittest
-import continuous_grid_env
-import grid_agent
 import json
-import continuous_grid_env_globals as e_globs
 import random
 import numpy as np
+
+from Agents.neural_agent import *
+from Envs.continuous_grid_env import *
+import Globals.continuous_grid_env_globals as e_globs
 
 class TestContinuousGridEnv(unittest.TestCase):
 
@@ -17,122 +18,122 @@ class TestContinuousGridEnv(unittest.TestCase):
         e_globs.current_state = e_globs.START_STATE
 
     def test_env_init(self):
-        self.assertEqual(continuous_grid_env.env_init(), None)
+        self.assertEqual(env_init(), None)
 
     def test_env_start(self):
-        continuous_grid_env.env_start()
+        env_start()
         self.assertEqual(e_globs.current_state, e_globs.START_STATE)
 
     def test_env_step(self):
         old_state = e_globs.current_state
 
-        continuous_grid_env.env_step(e_globs.NORTH)
+        env_step(e_globs.NORTH)
         self.assertTrue(e_globs.current_state[0] > old_state[0])
 
         old_state = e_globs.current_state
-        continuous_grid_env.env_step(e_globs.EAST)
+        env_step(e_globs.EAST)
         self.assertTrue(e_globs.current_state[1] > old_state[1])
 
         old_state = e_globs.current_state
-        continuous_grid_env.env_step(e_globs.SOUTH)
+        env_step(e_globs.SOUTH)
         self.assertTrue(e_globs.current_state[0] < old_state[0])
 
         old_state = e_globs.current_state
-        continuous_grid_env.env_step(e_globs.WEST)
+        env_step(e_globs.WEST)
         self.assertTrue(e_globs.current_state[1] < old_state[1])
 
 
     def test_env_step_sparse(self):
         e_globs.IS_SPARSE = True
 
-        new_context = continuous_grid_env.env_step(0)
+        new_context = env_step(0)
         self.assertEqual(new_context['reward'], 0)
 
         e_globs.current_state = e_globs.GOAL_STATE
-        new_context = continuous_grid_env.env_step(0)
+        new_context = env_step(0)
 
         self.assertEqual(new_context['reward'], 1)
 
     def test_env_step_rich(self):
         e_globs.IS_SPARSE = False
 
-        new_context = continuous_grid_env.env_step(0)
+        new_context = env_step(0)
         self.assertEqual(new_context['reward'], -1)
 
         e_globs.current_state = e_globs.GOAL_STATE
-        new_context = continuous_grid_env.env_step(0)
+        new_context = env_step(0)
         self.assertEqual(new_context['reward'], 0)
 
     def test_env_step_borders(self):
         e_globs.current_state = [1, 0]
-        continuous_grid_env.env_step(e_globs.NORTH)
+        env_step(e_globs.NORTH)
         self.assertEqual(e_globs.current_state, [1, 0])
 
         e_globs.current_state = [0, 1]
-        continuous_grid_env.env_step(e_globs.EAST)
+        env_step(e_globs.EAST)
         self.assertEqual(e_globs.current_state, [0, 1])
 
         e_globs.current_state = [0, 0]
-        continuous_grid_env.env_step(e_globs.SOUTH)
+        env_step(e_globs.SOUTH)
         self.assertEqual(e_globs.current_state, [0, 0])
 
         e_globs.current_state  = [0, 0]
-        continuous_grid_env.env_step(e_globs.WEST)
+        env_step(e_globs.WEST)
         self.assertEqual(e_globs.current_state, [0, 0])
 
     def test_env_step_obstacles(self):
 
         #Test trying to get into the box
         e_globs.current_state = [0.26, 0.24]
-        continuous_grid_env.env_step(e_globs.EAST)
+        env_step(e_globs.EAST)
         self.assertEqual(e_globs.current_state, [0.26, 0.24])
 
         e_globs.current_state = [0.76, 0.27]
-        continuous_grid_env.env_step(e_globs.SOUTH)
+        env_step(e_globs.SOUTH)
         self.assertEqual(e_globs.current_state, [0.76, 0.27])
 
         e_globs.current_state = [0.26, 0.76]
-        continuous_grid_env.env_step(e_globs.WEST)
+        env_step(e_globs.WEST)
         self.assertEqual(e_globs.current_state, [0.26, 0.76])
 
         #Test trying to go out of the box
         e_globs.current_state = [0.27, 0.376]
-        continuous_grid_env.env_step(e_globs.WEST)
+        env_step(e_globs.WEST)
         self.assertEqual(e_globs.current_state, [0.27, 0.376])
 
         e_globs.current_state = [0.624, 0.30]
-        continuous_grid_env.env_step(e_globs.NORTH)
+        env_step(e_globs.NORTH)
         self.assertEqual(e_globs.current_state, [0.624, 0.30])
 
         e_globs.current_state = [0.26, 0.624]
-        continuous_grid_env.env_step(e_globs.EAST)
+        env_step(e_globs.EAST)
         self.assertEqual(e_globs.current_state, [0.26, 0.624])
 
 
     def test_env_is_in_goal_state(self):
-        self.assertTrue(continuous_grid_env.is_goal_state(e_globs.GOAL_STATE))
-        self.assertTrue(continuous_grid_env.is_goal_state([0.999, 0.999]))
-        self.assertFalse(continuous_grid_env.is_goal_state([0.99, 0.99]))
+        self.assertTrue(is_goal_state(e_globs.GOAL_STATE))
+        self.assertTrue(is_goal_state([0.999, 0.999]))
+        self.assertFalse(is_goal_state([0.99, 0.99]))
 
     def test_env_step_reach_goal(self):
         e_globs.current_state  = [0.99, 0.99]
-        self.assertFalse(continuous_grid_env.is_goal_state(e_globs.current_state))
+        self.assertFalse(is_goal_state(e_globs.current_state))
 
-        continuous_grid_env.env_step(e_globs.NORTH)
-        self.assertFalse(continuous_grid_env.is_goal_state(e_globs.current_state))
+        env_step(e_globs.NORTH)
+        self.assertFalse(is_goal_state(e_globs.current_state))
 
-        continuous_grid_env.env_step(e_globs.EAST)
-        self.assertTrue(continuous_grid_env.is_goal_state(e_globs.current_state))
+        env_step(e_globs.EAST)
+        self.assertTrue(is_goal_state(e_globs.current_state))
 
     def test_env_cleanup(self):
-        self.assertEqual(continuous_grid_env.env_cleanup(), None)
+        self.assertEqual(env_cleanup(), None)
 
     def test_env_message_conditions_hold(self):
-        continuous_grid_env.env_message(json.dumps({"IS_SPARSE": True}))
+        env_message(json.dumps({"IS_SPARSE": True}))
         self.assertTrue(e_globs.IS_SPARSE)
 
     def test_env_message_conditions_fail(self):
-        continuous_grid_env.env_message(json.dumps({"IS_SPARSE": False}))
+        env_message(json.dumps({"IS_SPARSE": False}))
         self.assertFalse(e_globs.IS_SPARSE)
 
 # def print_environment():
