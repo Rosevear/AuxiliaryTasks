@@ -2,7 +2,7 @@ import unittest
 import grid_env
 import grid_agent
 import json
-import grid_env_globals as e_globs
+from grid_env_globals as e_globs
 import random
 import numpy as np
 

@@ -1,186 +1,62 @@
-random average results
-[667.1, 663.9, 741.7, 785.8, 499.3, 677.6, 619.2, 627.3, 558.9, 866.2, 716.0, 778.1, 630.5, 713.5, 603.5, 591.7, 570.2, 671.5, 497.0, 663.1, 623.3, 703.1, 541.8, 560.6, 772.3, 620.4, 535.0, 605.1, 515.0, 696.5, 692.6, 434.4, 611.1, 735.9, 534.0, 544.6, 767.6, 463.2, 542.5, 561.6, 706.5, 727.3, 607.6, 477.1, 443.6, 775.0, 612.7, 627.7, 682.4, 567.6]
-random agent summary statistics
-mean: 628.604 standard deviation: 97.8705654628
 tabular average results
-[1000.0, 412.0]
+[1000.0]
 tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-tabular average results
-[1000.0, 412.0]
-tabular agent summary statistics
-mean: 706.0 standard deviation: 294.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
-mean: 1000.0 standard deviation: 0.0
-neural average results
-[1000.0, 1000.0]
-neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
 neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
-neural average results
+tabular average results
 [1000.0]
-neural agent summary statistics
+tabular agent summary statistics
 mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
 neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
-neural average results
+tabular average results
 [1000.0]
-neural agent summary statistics
+tabular agent summary statistics
 mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
 neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
-neural average results
+tabular average results
 [1000.0]
-neural agent summary statistics
+tabular agent summary statistics
 mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
 neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
+mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
 neural agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+neural average results
+[1000.0]
+neural agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+neural average results
+[1000.0]
+neural agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
 mean: 1000.0 standard deviation: 0.0
 neural average results
 [1000.0]
@@ -322,3 +198,19 @@ neural average results
 [1000.0]
 neural agent summary statistics
 mean: 1000.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+neural average results
+[831.0]
+neural agent summary statistics
+mean: 831.0 standard deviation: 0.0
+tabular average results
+[1000.0]
+tabular agent summary statistics
+mean: 1000.0 standard deviation: 0.0
+neural average results
+[831.0]
+neural agent summary statistics
+mean: 831.0 standard deviation: 0.0

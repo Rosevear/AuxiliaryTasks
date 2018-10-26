@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 from __future__ import division
+
+from generic_globals import *
+
 from collections import namedtuple
 from utils import rand_in_range, rand_un
 from random import randint
@@ -36,7 +39,7 @@ def agent_init():
     if a_globs.AGENT == a_globs.RANDOM:
         pass
 
-    elif a_globs.AGENT == a_globs.TABULAR :
+    elif a_globs.AGENT == a_globs.TABULAR:
         a_globs.state_action_values = [[[0 for action in range(a_globs.NUM_ACTIONS)] for column in range(a_globs.NUM_COLUMNS)] for row in range(a_globs.NUM_ROWS)]
     elif a_globs.AGENT == a_globs.NEURAL:
 
@@ -203,10 +206,10 @@ def agent_step(reward, state):
                 most_recent_obs_state = cur_observation.states[-1]
                 sampled_state_formatted = format_states([most_recent_obs_state])
                 sampled_next_state_formatted = format_states([cur_observation.next_state])
-                print('sampled_state_formatted')
-                print(sampled_state_formatted)
-                print('sample state next formatted')
-                print(sampled_next_state_formatted)
+                # print('sampled_state_formatted')
+                # print(sampled_state_formatted)
+                # print('sample state next formatted')
+                # print(sampled_next_state_formatted)
 
                 #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
                 q_vals = a_globs.target_network.predict(sampled_next_state_formatted, batch_size=1)
@@ -285,27 +288,128 @@ def agent_cleanup():
 def agent_message(in_message):
     "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
 
-    params = json.loads(in_message)
-    a_globs.EPSILON_MIN = params["EPSILON"]
-    a_globs.ALPHA = params['ALPHA']
-    a_globs.GAMMA = params['GAMMA']
-    a_globs.AGENT = params['AGENT']
-    a_globs.IS_STOCHASTIC = params['IS_STOCHASTIC']
-    a_globs.IS_1_HOT = params['IS_1_HOT']
+    if in_message[0] == 'PLOT':
+        #Compute the values for use in the 3D plot
+        if a_globs.ENV == CONTINUOUS:
+            plot_range = in_message[1]
+            return compute_state_action_values_continuous(plot_range)
+        else:
+            return compute_state_action_values_discrete()
 
-    if a_globs.IS_1_HOT:
-        a_globs.FEATURE_VECTOR_SIZE = a_globs.NUM_ROWS * a_globs.NUM_COLUMNS
-        a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE * a_globs.NUM_ACTIONS
     else:
-        a_globs.FEATURE_VECTOR_SIZE = 2
-        a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
+        params = json.loads(in_message)
+        a_globs.EPSILON_MIN = params["EPSILON"]
+        a_globs.ALPHA = params['ALPHA']
+        a_globs.GAMMA = params['GAMMA']
+        a_globs.AGENT = params['AGENT']
+        a_globs.IS_STOCHASTIC = params['IS_STOCHASTIC']
+        a_globs.IS_1_HOT = params['IS_1_HOT']
+        a_globs.ENV = params['ENV']
 
-    #These parameters are for auxiliary tasks only, and always occur together
-    if 'N' in params and 'LAMBDA' in params:
-        a_globs.N = params['N']
-        a_globs.LAMBDA = params['LAMBDA']
+        if a_globs.IS_1_HOT:
+            a_globs.FEATURE_VECTOR_SIZE = a_globs.NUM_ROWS * a_globs.NUM_COLUMNS
+            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE * a_globs.NUM_ACTIONS
+        else:
+            a_globs.FEATURE_VECTOR_SIZE = 2
+            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
 
+        #These parameters are for auxiliary tasks only, and always occur together
+        if 'N' in params and 'LAMBDA' in params:
+            a_globs.N = params['N']
+            a_globs.LAMBDA = params['LAMBDA']
     return
+
+def compute_state_action_values_discrete():
+    "Compute the values for the current value function across all of the states"
+
+    max_x_val = a_globs.MAX_COLUMN + 1
+    max_y_val = a_globs.MAX_ROW + 1
+
+    x_values = np.empty((1, max_x_val))
+    y_values = np.empty((1, max_y_val))
+
+    # x_values = [x for x in range(max_x_val)]
+    # y_values = [y for y in range(max_y_val)]
+    plot_values = np.empty((max_x_val, max_y_val))
+    print(a_globs.AGENT)
+    print('plot shape')
+    print(plot_values.shape)
+    for x in range(max_x_val):
+        for y in range(max_y_val):
+            #State formatters expect a list of states in [row, column] format
+            cur_state = [y, x]
+            if a_globs.AGENT == a_globs.RANDOM:
+                pass
+            if a_globs.AGENT == a_globs.TABULAR:
+                #State action table is int[row, column] format
+                best_action_val = -max([a_globs.state_action_values[y][x][action] for action in range(a_globs.NUM_ACTIONS)])
+            elif a_globs.AGENT == a_globs.SARSA:
+                best_action_val = -max([approx_value(cur_state, action, weights)[0] for action in range(a_globs.NUM_ACTIONS)])
+            else:
+                cur_state_formatted = format_states([cur_state])
+                #print(best_action_val)
+                best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
+
+            #x_values.append(x)
+            #print('y value shape')
+            #print(y_values.shape)
+            #y_values.append(y)
+            y_values[0][y] = y
+            # print(best_action_val)
+            # print(plot_values)
+            plot_values[x][y] = best_action_val
+            # print('x_values')
+            # print(x_values)
+            # print('y_values')
+            # print(y_values)
+            # print('plot_values')
+            # print(plot_values)
+        x_values[0][x] = x
+    return x_values, np.transpose(y_values), np.transpose(plot_values)
+
+
+
+def compute_state_action_values_continuous(plot_range):
+    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
+
+    plot_values = []
+    x_values = []
+    y_values = []
+    for x in range(plot_range):
+        scaled_x = a_globs.MIN_COLUMN + (x * (a_globs.MAX_COLUMN - a_globs.MIN_COLUMN) / plot_range)
+        for y in range(plot_range):
+            #TODO: Check if we have to call the tile coder directly: the scaling
+            #code below might be like what is already done internally in approx value
+            #instead of just being a way to cycle through valid state values
+            scaled_y = a_globs.MIN_ROW + (y * (a_globs.MAX_ROW - a_globs.MIN_ROW) / plot_range)
+            cur_state = [scaled_y, scaled_x]
+            if a_globs.AGENT == a_globs.RANDOM:
+                pass
+            elif a_globs.AGENT == a_globs.SARSA:
+                best_action_val = -max([approx_value(cur_state, action, weights)[0] for action in range(a_globs.NUM_ACTIONS)])
+            else:
+                cur_state_formatted = format_states([cur_state])
+                best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))
+
+            x_values.append(scaled_x)
+            y_values.append(scaled_y)
+            plot_values.append(best_action_val)
+
+    return np.array(x_values)[:, np.newaxis], np.array(y_values)[:, np.newaxis], np.array(plot_values)[:, np.newaxis]
+
+def approx_value(state, action, weights):
+    global iht
+    """
+    Return the current approximated value for state and action given weights,
+    and the indices for the active features for the  for the state action pair.
+    """
+    scaled_position = a_globs.NUM_TILINGS * state[0] / (a_globs.MAX_COLUMN + abs(a_globs.MIN_COLUMN))
+    scaled_velocity = a_globs.NUM_TILINGS * state[1] / (a_globs.MAX_ROW + abs(a_globs.MIN_ROW))
+    cur_tiles = tiles(iht, a_globs.NUM_TILINGS, [scaled_position, scaled_velocity], [action])
+    estimate = 0
+    for tile in cur_tiles:
+        estimate += weights[0][tile]
+    return (estimate, cur_tiles)
 
 def update_target_network():
     "Updates the network currently being used as the target so that it reflects the current network that is learning"
@@ -588,6 +692,7 @@ def coordinate_states_encoding(states):
     """
 
     #flatten the states list
+    #[item for sublist in l for item in sublist]
     states = [coordinate for state in states for coordinate in state]
     formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 

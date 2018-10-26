@@ -13,16 +13,19 @@
 
 from __future__ import division
 from rl_glue import *  # Required for RL-Glue
-from time import sleep
+from generic_globals import *
 
 import argparse
 import json
 import random
 import numpy as np
 import platform
+
+from time import sleep
 from itertools import product
 from collections import namedtuple
 from math import log
+from mpl_toolkits.mplot3d import Axes3D
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -49,6 +52,76 @@ def do_plotting(suffix=0):
     else:
         print("Displaying the results...")
         plt.show()
+
+def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suffix=0):
+    "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
+
+    np.random.seed(0)
+    random.seed(0)
+    print('param settings')
+    print(param_settings)
+    for setting in param_settings:
+        cur_agent = setting[0]
+
+        print("Performing a single {} episode long run to compute values for the 3D plot for the {} agent".format(num_episodes, cur_agent))
+        send_params(cur_agent, setting)
+        RL_init()
+        for episode in range(num_episodes):
+            print("episode number : {}".format(episode))
+            RL_episode(max_steps)
+        (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+
+        # print('pre grid')
+        # print('x vals')
+        # print(x_values)
+        # # print('x vl shape')
+        # # print(x_values.shape)
+        # print('y vals')
+        # print(y_values)
+        # # print('y val shape')
+        # # print(y_values.shape)
+        # print('plot values')
+        # print(plot_values)
+        # print('plot values shape')
+        # print(plot_values.shape)
+        #
+        #
+        #
+        # x_values, y_values = np.meshgrid(x_values, y_values)
+
+        #print('post grid')
+        # print('x vals')
+        # print(x_values)
+        # print('x vl shape')
+        # print(x_values.shape)
+        # print('y vals')
+        # print(y_values)
+        # print('y val shape')
+        # print(y_values.shape)
+        # print('plot values')
+        # print(plot_values)
+        # print('plot values shape')
+        # print(plot_values.shape)
+
+
+        print("Plotting the 3D value function plot")
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_title('{} Agent Value Function'.format(cur_agent));
+        ax.set_xlabel('X position')
+        ax.set_ylabel('Y position')
+        ax.set_zlabel('Value')
+        ax.plot_wireframe(x_values, y_values, plot_values)
+
+        if RESULTS_FILE_NAME:
+            print("Saving the results...")
+            if suffix:
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            else:
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        else:
+            print("Displaying the results...")
+            plt.show()
 
 #Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
@@ -78,19 +151,30 @@ def save_results(results, cur_agent, filename='Default File Name'):
         results_file.write('{} agent summary statistics\n'.format(cur_agent))
         results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(results), np.std(results)))
 
+def send_params(cur_agent, param_setting):
+    "Send the specified agent and environment parameters to be used in the current run"
+
+    print(param_setting)
+    if cur_agent in AUX_AGENTS:
+        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
+    else:
+        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
+    enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
+    RL_agent_message(json.dumps(agent_params))
+    RL_env_message(json.dumps(enviro_params))
+
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
+#TODO: dynamically load the appropriate agent file to better separate the code
+#TODO: look into moving the agent helpers into their own module and importing them as needed
+#TODO: Look into using import all on global files to avoid having to prefix everything
+
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 #AUX_AGENTS = ['reward', 'state']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = ['neural', 'random']
-
-#Environments
-ORIGINAL = "grid"
-CONTINUOUS = 'continuous'
-WINDY = 'windy'
+AGENTS = ['tabular', 'neural']
 
 #MISC
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
@@ -108,7 +192,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. This is currently disabled, and will default to n = 1')
-    parser.add_argument('-env', choices={"grid", "continuous", "windy"}, type=str, default="grid", help='Which environment to train the agent on. Options are: "grid", "continuous", "windy". Default is env = "grid"')
+    parser.add_argument('-env', choices={GRID, CONTINUOUS, WINDY}, type=str, default=GRID, help='Which environment to train the agent on. Options are: {}, {}, {}. Default is env = "grid"'. format(GRID, CONTINUOUS, WINDY))
     parser.add_argument('-name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
     parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment')
@@ -117,9 +201,11 @@ if __name__ == "__main__":
     parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
     parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
+    parser.add_argument('--values', action='store_true', help='Whether to plot the value function plot for each agent. Default = false')
 
     args = parser.parse_args()
 
+    #Validate user arguments
     if args.e < 0 or args.e > 1 or args.a < 0 or args.a > 1 or args.g < 0 or args.g > 1 or args.l < 0 or args.l > 1:
         exit("Epsilon, Alpha, Gamma, Lambda parameters must be a value between 0 and 1, inclusive.")
 
@@ -128,7 +214,7 @@ if __name__ == "__main__":
 
     if args.env == WINDY and args.actions != 4:
         exit("The only valid action set for all non-windy gridworlds is 4 moves.")
-    elif args.continuous and (args.stochastic or args.hot):
+    elif args.env == CONTINUOUS and (args.stochastic or args.hot):
         exit("The continuous gridworld environment does not support stochastic obstacle states, nor 1-hot vector encodings")
 
     else:
@@ -179,8 +265,6 @@ if __name__ == "__main__":
         cur_agent = param_setting[0]
 
         #Load the appropriate agent and environment files
-        #TODO: dynamically load the appropriate agent file to better separate the code
-        #TODO: import from the globals file using the same statement type as above before splitting to other files
         RLGlue("{}_env".format(args.env), "grid_agent")
 
         if cur_agent in AUX_AGENTS:
@@ -195,13 +279,7 @@ if __name__ == "__main__":
             random.seed(run)
 
             #Send the agent and environment parameters to use for the current run
-            if cur_agent in AUX_AGENTS:
-                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
-            else:
-                agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT}
-            enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
-            RL_agent_message(json.dumps(agent_params))
-            RL_env_message(json.dumps(enviro_params))
+            send_params(cur_agent, param_setting)
 
             run_results = []
             print("Run number: {}".format(str(run)))
@@ -315,4 +393,7 @@ if __name__ == "__main__":
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
         setup_plot()
         do_plotting()
+
+        if args.values:
+            plot_value_function(1000, max_steps, 50, all_param_settings)
     print("Experiment completed!")

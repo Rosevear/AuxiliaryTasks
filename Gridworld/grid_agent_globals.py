@@ -1,8 +1,10 @@
 #Constants, per run
-NUM_ROWS = 6
-NUM_COLUMNS = 9
-GOAL_STATE = (5, 8)
-OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
+# NUM_ROWS = 6
+# NUM_COLUMNS = 9
+# GOAL_STATE = (5, 8)
+# OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
+
+from grid_env_globals import *
 
 #Parameters
 EPSILON = 1.0
@@ -11,6 +13,12 @@ ALPHA = None
 GAMMA = None
 EPSILON_MIN = None
 N = None
+
+#For Sarsa agent specifically
+SARSA_LAMBDA = None
+NUM_TILINGS = None
+IHT_SIZE = None
+
 IS_STOCHASTIC = None
 IS_1_HOT = None
 NUM_ACTIONS = 4
@@ -27,7 +35,7 @@ BUFFER_SIZE = 1000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #The number of times sample from the rexperience eplay buffer per time step
-SAMPLES_PER_STEP = 9
+SAMPLES_PER_STEP = 0
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1
@@ -38,7 +46,8 @@ COORD_SUFFIX = 'coord'
 #Agents: non auxiliary task based
 RANDOM = 'random'
 NEURAL = 'neural'
-TABULAR = 'tabularQ'
+TABULAR = 'tabular'
+SARSA = 'sarsa'
 
 #Agents: auxiliary task based
 REWARD = 'reward'
@@ -46,6 +55,8 @@ STATE = 'state'
 REDUNDANT = 'redundant'
 NOISE = 'noise'
 AGENT = None
+
+ENV = None
 
 #Variables
 state_action_values = None
