@@ -13,7 +13,7 @@
 
 from __future__ import division
 from rl_glue import *  # Required for RL-Glue
-from generic_globals import *
+from Globals.generic_globals import *
 
 import argparse
 import json
@@ -70,38 +70,6 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             print("episode number : {}".format(episode))
             RL_episode(max_steps)
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
-
-        # print('pre grid')
-        # print('x vals')
-        # print(x_values)
-        # # print('x vl shape')
-        # # print(x_values.shape)
-        # print('y vals')
-        # print(y_values)
-        # # print('y val shape')
-        # # print(y_values.shape)
-        # print('plot values')
-        # print(plot_values)
-        # print('plot values shape')
-        # print(plot_values.shape)
-        #
-        #
-        #
-        # x_values, y_values = np.meshgrid(x_values, y_values)
-
-        #print('post grid')
-        # print('x vals')
-        # print(x_values)
-        # print('x vl shape')
-        # print(x_values.shape)
-        # print('y vals')
-        # print(y_values)
-        # print('y val shape')
-        # print(y_values.shape)
-        # print('plot values')
-        # print(plot_values)
-        # print('plot values shape')
-        # print(plot_values.shape)
 
 
         print("Plotting the 3D value function plot")
@@ -170,11 +138,15 @@ def send_params(cur_agent, param_setting):
 #TODO: look into moving the agent helpers into their own module and importing them as needed
 #TODO: Look into using import all on global files to avoid having to prefix everything
 
+#Directory locations for the agents and environments
+AGENT_DIR = 'Agents'
+ENV_DIR = 'Environments'
+
 #AUX_AGENTS = ['reward', 'state', 'redundant', 'noise']
 #AUX_AGENTS = ['reward', 'state']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = ['tabular', 'neural']
+AGENTS = ['neural']
 
 #MISC
 GRAPH_COLOURS = ('r', 'g', 'b', 'c', 'm', 'y', 'k')
@@ -265,7 +237,7 @@ if __name__ == "__main__":
         cur_agent = param_setting[0]
 
         #Load the appropriate agent and environment files
-        RLGlue("{}_env".format(args.env), "grid_agent")
+        RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
 
         if cur_agent in AUX_AGENTS:
             print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
