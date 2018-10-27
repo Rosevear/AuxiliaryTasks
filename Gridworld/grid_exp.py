@@ -135,10 +135,11 @@ def send_params(cur_agent, param_setting):
 ###### HELPER FUNCTIONS END #################
 
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
+#TODO: Fix the per parameter setting display with the trace parameter: having that is messing up the dictionary merging
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
-AUX_AGENTS = []
+AUX_AGENTS = [a_globs.STATE]
 #AGENTS = []
-AGENTS = [a_globs.SARSA_LAMBDA]
+AGENTS = [a_globs.TABULAR, a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 
@@ -177,11 +178,9 @@ if __name__ == "__main__":
         exit("The only valid action set for all non-windy gridworlds is 4 moves.")
     elif args.env == CONTINUOUS and (args.stochastic or args.hot):
         exit("The continuous gridworld environment does not support stochastic obstacle states, nor 1-hot vector encodings")
-
     else:
         print('Running the {} environment'.format(args.env))
 
-    #Agent and environment parameters, and experiment settings
     if args.sweep:
         #To ensure the same parameters are sampled from on multiple invocations of the program
         np.random.seed(0)
@@ -304,16 +303,18 @@ if __name__ == "__main__":
             if agent in AUX_AGENTS:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3]), str(best_agent_results[agent].params[4])))
             elif agent == a_globs.SARSA_LAMBDA:
+                plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2]), str(best_agent_results[agent].params[3])))
+            else:
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
             i += 1
         setup_plot()
         do_plotting()
 
-        # print('param setting results pre merge')
-        # print(param_setting_results)
+        print('param setting results pre merge')
+        print(param_setting_results)
 
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
-        reg_agent_param_settings = list(product(alpha_params, gamma_params))
+        reg_agent_param_settings = list(product(alpha_params, gamma_params, trace_params))
         for reg_agent_params in reg_agent_param_settings:
             for key in param_setting_results.keys():
                 if reg_agent_params != key and reg_agent_params == key[:len(key) - NUM_AUX_AGENT_PARAMS]:
@@ -322,22 +323,27 @@ if __name__ == "__main__":
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
-        # print('param setting results post merge')
-        # print(param_setting_results)
+        print('param setting results post merge')
+        print(param_setting_results)
         for param_setting in param_setting_results:
             plt.clf()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
-            # print('param setting keys')
-            # print(cur_param_setting_result.keys())
+            print('param setting')
+            print(param_setting)
+            print('param setting keys')
+            print(cur_param_setting_result.keys())
             for agent in cur_param_setting_result.keys():
+
+                print('param setting data')
+                print(cur_param_setting_result[agent].data)
 
                 save_results(cur_param_setting_result[agent].data, agent, ''.join([RESULTS_FILE_NAME, str(file_name_suffix)]))
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {}  Alpha = {} Gamma = {} N = {}, Lambda = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[3]), str(cur_param_setting_result[agent].params[4])))
                 elif cur_agent == a_globs.SARSA_LAMBDA:
-                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), str(all_param_settings[i][3])))
+                    plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2]), str(cur_param_setting_result[agent].params[2])))
                 else:
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2])))
                 i += 1
@@ -346,7 +352,7 @@ if __name__ == "__main__":
             file_name_suffix += 1
 
     else:
-        #Average the results over all of the runs
+        #Average the results over all of the runs for the single paramters setting provided
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])

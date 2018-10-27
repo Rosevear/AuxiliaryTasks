@@ -3,6 +3,9 @@ import json
 import random
 import numpy as np
 
+from os import sys, path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 from Agents.tabular_agent import *
 from Envs.grid_env import *
 import Globals.grid_env_globals as e_globs

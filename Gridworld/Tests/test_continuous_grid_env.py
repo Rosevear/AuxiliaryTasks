@@ -3,6 +3,9 @@ import json
 import random
 import numpy as np
 
+from os import sys, path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 from Agents.neural_agent import *
 from Envs.continuous_grid_env import *
 import Globals.continuous_grid_env_globals as e_globs

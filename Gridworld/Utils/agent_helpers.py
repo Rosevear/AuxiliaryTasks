@@ -67,8 +67,6 @@ def compute_state_action_values_discrete():
         x_values[0][x] = x
     return x_values, np.transpose(y_values), np.transpose(plot_values)
 
-
-
 def compute_state_action_values_continuous(plot_range):
     "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
 
