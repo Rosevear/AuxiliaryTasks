@@ -31,7 +31,7 @@ NUM_NOISE_NODES = 10
 NUM_REDUNDANT_TASKS = 5
 
 #Used for sampling in the auxiliary tasks
-BUFFER_SIZE = 1000
+BUFFER_SIZE = 10000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #The number of times sample from the rexperience eplay buffer per time step
@@ -39,6 +39,9 @@ SAMPLES_PER_STEP = 0
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1
+
+#How long to wait before actually freezing the network
+MIN_NUM_STEPS_TO_FREEZE = 0
 
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'

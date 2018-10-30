@@ -137,9 +137,9 @@ def send_params(cur_agent, param_setting):
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 #TODO: Fix the per parameter setting display with the trace parameter: having that is messing up the dictionary merging
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
-AUX_AGENTS = [a_globs.STATE]
+AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.TABULAR, a_globs.SARSA_LAMBDA]
+AGENTS = [a_globs.NEURAL]
 
 if __name__ == "__main__":
 

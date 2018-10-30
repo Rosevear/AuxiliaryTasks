@@ -140,7 +140,7 @@ def agent_step(reward, state):
             # print(q_vals)
             a_globs.model.fit(sampled_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
-    if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
+    if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0 and RL_num_steps() >= a_globs.MIN_NUM_STEPS_TO_UPDATE:
         update_target_network()
 
     a_globs.cur_state = next_state
