@@ -7,35 +7,41 @@ A research project that explores the impact of auxiliary tasks, as defined in Ja
 in a simple gridworld environment to observe their impact on environments with different reward and state transition dynamics
 
 ####Installation####
+NOTE: This is provided as a script 'get_ubuntu_deps.sh' in the Scripts folder and was written and tested on Ubuntu 16.04
 
-#Make sure you have python (2.7.12) and the pip package manager installed
+#Install GCC and G++ compilers
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install g++-7 -y
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 \
+                         --slave /usr/bin/g++ g++ /usr/bin/g++-7
+sudo update-alternatives --config gcc
+gcc --version
+g++ --version
 
-#Install virtualenv: https://virtualenv.pypa.io/en/stable/ (it is used to create a virtual environment to keep python dependencies between projects separate from each other and the global system packages)
+#Install the Blas numerical computing library
+sudo apt install libblas-dev -y
 
-#Create a virtualenv to house the project
+#Binaries for graph visualization used by Keras
+sudo apt-get install graphviz -y
 
-virtualenv --python=PATH_TO_PYTHON project_name
+#Install virtualenv
+sudo apt install virtualenv
 
-#Enter the environment
-
-cd project_name
-
+#Create virtual environment and navigate to it, and activate it
+virtualenv AUX
+cd AUX
 source bin/activate
 
-#Get the repository
-
+#Clone the repo, enter it, and install python dependencies
 git clone https://github.com/Rosevear/AuxiliaryTasks.git
-
-#Install the dependencies via pip
-
-cd AuxiliaryTasks
-
-pip install -r requirements.txt
+cd Auxiliary-Tasks
+python pip install -r requirements.txt
 
 
 #Run the unit tests for the environment
 
-python test_grid_env.py
+Navigate to the tests folder and run each individual test file from the command line (e.g): python test_grid_env.py
 
 #TODO: Add tests for experiment and agent files
 
