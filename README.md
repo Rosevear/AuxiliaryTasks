@@ -8,42 +8,66 @@ in a simple gridworld environment to observe their impact on environments with d
 
 ####Installation####
 
-#Make sure you have python (2.7.12) and the pip package manager installed
+NOTE: This is provided as a script 'get_ubuntu_deps.sh' in the Scripts folder and was written and tested on Ubuntu 16.04
 
-#Install virtualenv: https://virtualenv.pypa.io/en/stable/ (it is used to create a virtual environment to keep python dependencies between projects separate from each other and the global system packages)
+#Install GCC and G++ compilers
 
-#Create a virtualenv to house the project
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 
-virtualenv --python=PATH_TO_PYTHON project_name
+sudo apt update
 
-#Enter the environment
+sudo apt install g++-7 -y
 
-cd project_name
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 \
+                         --slave /usr/bin/g++ g++ /usr/bin/g++-7
+
+sudo update-alternatives --config gcc
+
+gcc --version
+
+g++ --version
+
+#Install the Blas numerical computing library
+
+sudo apt install libblas-dev -y
+
+#Binaries for graph visualization used by Keras
+
+sudo apt-get install graphviz -y
+
+#Install virtualenv
+
+sudo apt install virtualenv
+
+#Create virtual environment and navigate to it, and activate it
+
+virtualenv AUX
+
+cd AUX
 
 source bin/activate
 
-#Get the repository
+#Clone the repo, enter it, and install python dependencies
 
 git clone https://github.com/Rosevear/AuxiliaryTasks.git
 
-#Install the dependencies via pip
-
-cd AuxiliaryTasks
+cd Auxiliary-Tasks
 
 pip install -r requirements.txt
 
-
+#####TESTING#####
 #Run the unit tests for the environment
 
-python test_grid_env.py
+Navigate to the tests folder and run each individual test file from the command line (e.g): python test_grid_env.py
 
 #TODO: Add tests for experiment and agent files
 
+#####RUNNING#####
 #Run the experiments for a particular parameter setting 
 
 python grid_exp.py ARG_OPTIONS (look in grid_exp.py at the arg parser or use the command line to learn about the options)
 
 OR
 
-See the various bash scripts to run across varous environments and sweep the hyperparameters
+See the various bash scripts to run across varous environments and sweep the hyperparameters (the parameters swept over can be modified in grid_exp.py)
 

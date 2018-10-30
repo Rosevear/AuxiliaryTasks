@@ -14,6 +14,9 @@ sudo apt install libblas-dev -y
 #Binaries for graph visualization used by Keras
 sudo apt-get install graphviz -y
 
+#Install virtualenv
+sudo apt install virtualenv
+
 #Create virtual environment and navigate to it, and activate it
 virtualenv AUX
 cd AUX
