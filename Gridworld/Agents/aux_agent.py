@@ -3,6 +3,8 @@
 from __future__ import division
 
 import Globals.grid_agent_globals as a_globs
+import Globals.grid_env_globals as e_globs
+import Globals.continuous_grid_env_globals as cont_e_globs
 from Globals.generic_globals import *
 
 from Utils.utils import rand_in_range, rand_un
@@ -162,10 +164,10 @@ def agent_message(in_message):
         a_globs.ENV = params['ENV']
 
         if a_globs.IS_1_HOT:
-            a_globs.FEATURE_VECTOR_SIZE = a_globs.NUM_ROWS * a_globs.NUM_COLUMNS
+            a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_ROWS * e_globs.NUM_COLUMNS
             a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE * a_globs.NUM_ACTIONS
         else:
-            a_globs.FEATURE_VECTOR_SIZE = 2
+            a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES
             a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
 
         #These parameters are for auxiliary tasks only, and always occur together

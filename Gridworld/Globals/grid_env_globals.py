@@ -20,6 +20,7 @@ NUM_COLUMNS = 9
 START_STATE = [3, 0]
 GOAL_STATE = [5, 8]
 OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
+NUM_STATE_COORDINATES  = 2 #(x, y)
 
 #Variables
 current_state = None

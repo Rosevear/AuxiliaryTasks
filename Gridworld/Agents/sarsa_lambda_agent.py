@@ -70,6 +70,9 @@ def agent_step(reward, state):
 
     a_globs.cur_state = next_state
     a_globs.cur_action = next_action
+    # print(state)
+    # print(reward)
+    # print(next_action)
     return a_globs.cur_action
 
 def agent_end(reward):
@@ -90,7 +93,6 @@ def agent_cleanup():
     return
 
 def agent_message(in_message): # returns string, in_message: string
-
     "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
 
     if in_message[0] == 'PLOT':
@@ -112,12 +114,16 @@ def agent_message(in_message): # returns string, in_message: string
         a_globs.IS_1_HOT = params['IS_1_HOT']
         a_globs.ENV = params['ENV']
 
-        if a_globs.IS_1_HOT:
-            a_globs.FEATURE_VECTOR_SIZE = a_globs.NUM_ROWS * a_globs.NUM_COLUMNS
-            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE * a_globs.NUM_ACTIONS
+        if a_globs.ENV == GRID:
+            a_globs.IS_DISCRETE = True
         else:
-            a_globs.FEATURE_VECTOR_SIZE = 2
-            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
+            a_globs.IS_DISCRETE = False
+
+        def determine_feature_vector_dims(format, env):
+            """
+            Determines what the dimensions of the feature vector mus be given the specified format and the current environment
+            """
+
 
         #These parameters are for auxiliary tasks only, and always occur together
         if 'N' in params and 'LAMBDA' in params:

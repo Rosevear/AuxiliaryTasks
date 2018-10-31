@@ -1,11 +1,3 @@
-#Constants, per run
-# NUM_ROWS = 6
-# NUM_COLUMNS = 9
-# GOAL_STATE = (5, 8)
-# OBSTACLE_STATES = [[2, 2], [3, 2], [4, 2], [1, 5], [3, 7], [4, 7], [5, 7]]
-
-from grid_env_globals import *
-
 #Parameters
 EPSILON = 1.0
 LAMBDA = None
@@ -22,6 +14,7 @@ IHT_SIZE = 4096
 IS_STOCHASTIC = None
 IS_1_HOT = None
 NUM_ACTIONS = 4
+IS_DISCRETE = None
 
 FEATURE_VECTOR_SIZE = None
 AUX_FEATURE_VECTOR_SIZE = None

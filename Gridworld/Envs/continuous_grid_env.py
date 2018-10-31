@@ -30,7 +30,7 @@ def env_step(action):
 
     #Change the state based on the agent action and some noise
     noise = rand_norm(e_globs.ACTION_NOISE_MEAN, e_globs.ACTION_NOISE_VARIANCE)
-    state_modifier = e_globs.ACTION_EFFFECT_SIZE + 0
+    state_modifier = e_globs.ACTION_EFFFECT_SIZE + noise
     if action == e_globs.NORTH:
         e_globs.current_state = [cur_row + state_modifier, cur_column]
     elif action == e_globs.EAST:

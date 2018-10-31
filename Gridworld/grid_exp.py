@@ -71,6 +71,12 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             print("episode number : {}".format(episode))
             RL_episode(max_steps)
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+        print('x vals')
+        print(x_values)
+        print('y vals')
+        print(y_values)
+        print('plot values')
+        print(plot_values)
 
 
         print("Plotting the 3D value function plot")
@@ -139,7 +145,7 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.NEURAL]
+AGENTS = [a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 
@@ -373,5 +379,5 @@ if __name__ == "__main__":
         do_plotting()
 
         if args.values:
-            plot_value_function(1000, max_steps, 50, all_param_settings)
+            plot_value_function(1, max_steps, 50, all_param_settings)
     print("Experiment completed!")

@@ -44,14 +44,6 @@ def agent_cleanup():
     return
 
 def agent_message(in_message):
-    "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
-
-    if in_message[0] == 'PLOT':
-        #Compute the values for use in the 3D plot
-        if a_globs.ENV == CONTINUOUS:
-            plot_range = in_message[1]
-            return compute_state_action_values_continuous(plot_range)
-        else:
-            return compute_state_action_values_discrete()
+    pass
 
     return

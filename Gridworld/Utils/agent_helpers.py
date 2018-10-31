@@ -1,5 +1,7 @@
 
 import Globals.grid_agent_globals as a_globs
+import Globals.grid_env_globals as e_globs
+import Globals.continuous_grid_env_globals as cont_e_globs
 from Globals.generic_globals import *
 from Utils.utils import rand_in_range, rand_un
 from Utils.tiles3 import IHT, tiles
@@ -21,19 +23,20 @@ from keras.initializers import he_normal
 from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 
+
 def compute_state_action_values_discrete():
     "Compute the values for the current value function across all of the states"
 
-    max_x_val = a_globs.MAX_COLUMN + 1
-    max_y_val = a_globs.MAX_ROW + 1
+    max_x_val = e_globs.MAX_COLUMN + 1
+    max_y_val = e_globs.MAX_ROW + 1
 
     x_values = np.empty((1, max_x_val))
     y_values = np.empty((1, max_y_val))
 
     plot_values = np.empty((max_x_val, max_y_val))
-    print(a_globs.AGENT)
-    print('plot shape')
-    print(plot_values.shape)
+    # print(a_globs.AGENT)
+    # print('plot shape')
+    # print(plot_values.shape)
     for x in range(max_x_val):
         for y in range(max_y_val):
             #State formatters expect a list of states in [row, column] format
@@ -44,7 +47,7 @@ def compute_state_action_values_discrete():
                 #State action table is int[row, column] format
                 best_action_val = -max([a_globs.state_action_values[y][x][action] for action in range(a_globs.NUM_ACTIONS)])
             elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
-                best_action_val = -max([approx_value(cur_state, action, weights)[0] for action in range(a_globs.NUM_ACTIONS)])
+                best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
                 #print(best_action_val)
@@ -75,9 +78,12 @@ def compute_state_action_values_continuous(plot_range):
     plot_values = np.empty((plot_range, plot_range))
 
     for x in range(plot_range):
-        scaled_x = a_globs.MIN_COLUMN + (x * (a_globs.MAX_COLUMN - a_globs.MIN_COLUMN) / plot_range)
+        #print(a_globs.MIN_COLUMN)
+        scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
+        print('scaling x')
+        print(scaled_x)
         for y in range(plot_range):
-            scaled_y = a_globs.MIN_ROW + (y * (a_globs.MAX_ROW - a_globs.MIN_ROW) / plot_range)
+            scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]
             if a_globs.AGENT == a_globs.RANDOM:
                 pass
@@ -91,7 +97,7 @@ def compute_state_action_values_continuous(plot_range):
             #print('y value shape')
             #print(y_values.shape)
             #y_values.append(y)
-            y_values[0][y] = y
+            y_values[0][y] = scaled_y
             # print(best_action_val)
             # print(plot_values)
             plot_values[x][y] = best_action_val
@@ -101,18 +107,24 @@ def compute_state_action_values_continuous(plot_range):
             # print(y_values)
             # print('plot_values')
             # print(plot_values)
-        x_values[0][x] = x
+        x_values[0][x] = scaled_x
     return x_values, np.transpose(y_values), np.transpose(plot_values)
 
 def approx_value(state, action, weights):
     """
     Return the current approximated value for state and action given weights,
-    and the indices for the active features for the  for the state action pair.
+    and the indices for the active features for the for the state action pair.
     """
-    scaled_column = a_globs.NUM_TILINGS * state[0] / (a_globs.MAX_COLUMN + abs(a_globs.MIN_COLUMN))
-    scaled_row = a_globs.NUM_TILINGS * state[1] / (a_globs.MAX_ROW + abs(a_globs.MIN_ROW))
+    if a_globs.IS_DISCRETE:
+        scaled_column = a_globs.NUM_TILINGS * state[0] / (e_globs.MAX_COLUMN + abs(e_globs.MIN_COLUMN))
+        scaled_row = a_globs.NUM_TILINGS * state[1] / (e_globs.MAX_ROW + abs(e_globs.MIN_ROW))
+    else:
+        scaled_column = a_globs.NUM_TILINGS * state[0] / (cont_e_globs.MAX_COLUMN + abs(cont_e_globs.MIN_COLUMN))
+        scaled_row = a_globs.NUM_TILINGS * state[1] / (cont_e_globs.MAX_ROW + abs(cont_e_globs.MIN_ROW))
+
     cur_tiles = tiles(a_globs.iht, a_globs.NUM_TILINGS, [scaled_column, scaled_row], [action])
     estimate = 0
+
     for tile in cur_tiles:
         estimate += weights[0][tile]
     return (estimate, cur_tiles)
@@ -371,7 +383,7 @@ def states_encode_1_hot(states):
 
     all_states_1_hot = []
     for state in states:
-        state_1_hot = np.zeros((a_globs.NUM_ROWS, a_globs.NUM_COLUMNS))
+        state_1_hot = np.zeros((e_globs.NUM_ROWS, e_globs.NUM_COLUMNS))
         state_1_hot[state[0]][state[1]] = 1
         state_1_hot = state_1_hot.reshape(1, a_globs.FEATURE_VECTOR_SIZE)
         all_states_1_hot.append(state_1_hot)
@@ -385,7 +397,7 @@ def states_actions_encode_1_hot(states, actions):
     for i in range(len(states)):
         state = states[i]
         action = actions[i]
-        state_1_hot = np.zeros((a_globs.NUM_ROWS, a_globs.NUM_COLUMNS, a_globs.NUM_ACTIONS))
+        state_1_hot = np.zeros((e_globs.NUM_ROWS, e_globs.NUM_COLUMNS, a_globs.NUM_ACTIONS))
         state_1_hot[state[0]][state[1]][action] = 1
         state_1_hot = state_1_hot.reshape(1, a_globs.AUX_FEATURE_VECTOR_SIZE)
         all_states_1_hot.append(state_1_hot)
