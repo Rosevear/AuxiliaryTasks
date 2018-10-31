@@ -8,7 +8,7 @@ SOUTH = 2
 WEST = 3
 
 ACTION_SET = [NORTH, EAST, SOUTH, WEST]
-ACTION_EFFFECT_SIZE = 0.1
+ACTION_EFFFECT_SIZE = 0.01
 
 #On average, the agent acieves what it set out to do, so the man is 0
 ACTION_NOISE_MEAN = 0

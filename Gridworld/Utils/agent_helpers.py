@@ -1,4 +1,6 @@
 
+from __future__ import division
+
 import Globals.grid_agent_globals as a_globs
 import Globals.grid_env_globals as e_globs
 import Globals.continuous_grid_env_globals as cont_e_globs
@@ -78,10 +80,15 @@ def compute_state_action_values_continuous(plot_range):
     plot_values = np.empty((plot_range, plot_range))
 
     for x in range(plot_range):
-        #print(a_globs.MIN_COLUMN)
+        # print('min column')
+        # print(cont_e_globs.MIN_COLUMN)
+        # print('max column')
+        # print(cont_e_globs.MAX_COLUMN)
+        # print('x')
+        # print(x)
         scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
-        print('scaling x')
-        print(scaled_x)
+        #print('scaled x')
+        #print(scaled_x)
         for y in range(plot_range):
             scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]

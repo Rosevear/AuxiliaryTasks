@@ -164,7 +164,8 @@ def agent_cleanup():
     "Perform miscellaneous state management at the end of the current run"
 
     #Decay epsilon at the end of the episode
-    a_globs.cur_epsilon = max(a_globs.EPSILON_MIN, a_globs.cur_epsilon - (1 / (RL_num_episodes() + 1)))
+    a_globs.cur_epsilon = max(a_globs.EPSILON_MIN, a_globs.cur_epsilon - a_globs.EPSILON_DECAY_RATE)
+    print('Cur epsilon at episode end: {}'.format(a_globs.cur_epsilon))
     return
 
 def agent_message(in_message):

@@ -57,26 +57,28 @@ def do_plotting(suffix=0):
 def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suffix=0):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
-    np.random.seed(6)
-    random.seed(6)
-    print('param settings')
-    print(param_settings)
+    np.random.seed(2)
+    random.seed(2)
+    # print('param settings')
+    # print(param_settings)
     for setting in param_settings:
         cur_agent = setting[0]
 
         print("Performing a single {} episode long run to compute values for the 3D plot for the {} agent".format(num_episodes, cur_agent))
+        print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
         send_params(cur_agent, setting)
         RL_init()
         for episode in range(num_episodes):
             print("episode number : {}".format(episode))
             RL_episode(max_steps)
+            RL_cleanup()
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
-        print('x vals')
-        print(x_values)
-        print('y vals')
-        print(y_values)
-        print('plot values')
-        print(plot_values)
+        # print('x vals')
+        # print(x_values)
+        # print('y vals')
+        # print(y_values)
+        # print('plot values')
+        # print(plot_values)
 
 
         print("Plotting the 3D value function plot")
@@ -145,11 +147,12 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.SARSA_LAMBDA]
+AGENTS = [a_globs.NEURAL]
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
+    parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
     parser.add_argument('-l', nargs='?', type=float, default=1.0, help='Lambda parameter specifying the weighting for the auxiliary loss. Ranges from 0 to 1.0 inclusive. Default value = 1.0')
@@ -221,7 +224,7 @@ if __name__ == "__main__":
     RESULTS_FILE_NAME = args.name
 
     num_episodes = args.epi
-    max_steps = 1000
+    max_steps = args.max
     num_runs = args.run
 
     #The main experiment loop
@@ -273,7 +276,7 @@ if __name__ == "__main__":
     #Process and plot the results
     if IS_SWEEP:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
-        all_params_no_agent = list(product(alpha_params, gamma_params, trace_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
+        all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
         best_agent_results = {}
         avg_results = []
@@ -320,7 +323,7 @@ if __name__ == "__main__":
         print(param_setting_results)
 
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
-        reg_agent_param_settings = list(product(alpha_params, gamma_params, trace_params))
+        reg_agent_param_settings = list(product(alpha_params, gamma_params))
         for reg_agent_params in reg_agent_param_settings:
             for key in param_setting_results.keys():
                 if reg_agent_params != key and reg_agent_params == key[:len(key) - NUM_AUX_AGENT_PARAMS]:
@@ -379,5 +382,5 @@ if __name__ == "__main__":
         do_plotting()
 
         if args.values:
-            plot_value_function(1, max_steps, 50, all_param_settings)
+            plot_value_function(1000, max_steps, 50, all_param_settings)
     print("Experiment completed!")

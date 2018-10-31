@@ -4,6 +4,7 @@ LAMBDA = None
 ALPHA = None
 GAMMA = None
 EPSILON_MIN = None
+EPSILON_DECAY_RATE = 0.1
 N = None
 
 #For Sarsa agent specifically
