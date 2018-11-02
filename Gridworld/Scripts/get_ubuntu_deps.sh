@@ -1,3 +1,4 @@
+#!/bin/bash
 #Install GCC and G++ compilers
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt update

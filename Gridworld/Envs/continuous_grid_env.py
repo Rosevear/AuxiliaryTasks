@@ -24,6 +24,7 @@ def env_step(action):
         print "e_globs.current_state : ", e_globs.current_state
         exit(1)
 
+
     old_state = e_globs.current_state
     cur_row = e_globs.current_state[0]
     cur_column = e_globs.current_state[1]
@@ -55,6 +56,13 @@ def env_step(action):
     #Enforce the constraint that some squares are out of bounds, so we go nowhere if we try to step into or through them
     if agent_is_blocked(old_state, e_globs.current_state):
        e_globs.current_state = old_state
+
+    # print('old state')
+    # print(old_state)
+    # print('action')
+    # print(action)
+    # print('new state')
+    # print(e_globs.current_state)
 
     #Set the reward structure for the environment
     if e_globs.IS_SPARSE:
@@ -127,9 +135,11 @@ def is_blocked_vertically(start_state, destination_state):
         # print(obstacle_top_left_pt)
         #Check we do not go through the bottom of the obstacle
         if (start_state[0] < obstacle_bottom_left_pt[0] and destination_state[0] >= obstacle_bottom_left_pt[0]) and (start_state[1] >= obstacle_bottom_left_pt[1] and start_state[1] <= obstacle_bottom_right_pt[1]):
+            # print('Blocked vertically from above!')
             return True
         #Check that we do not go through the top of the obstacle
         elif (start_state[0] > obstacle_top_left_pt[0] and destination_state[0] <= obstacle_top_left_pt[0]) and (start_state[1] >= obstacle_bottom_left_pt[1] and start_state[1] <= obstacle_bottom_right_pt[1]):
+            # print('Blocked vertically from below!')
             return True
 
     return False
@@ -160,9 +170,11 @@ def is_blocked_horizontally(start_state, destination_state):
         # print(obstacle_bottom_right_pt)
         #Check we do not go through the obstacle left to right
         if (start_state[1] < obstacle_bottom_left_pt[1] and destination_state[1] >= obstacle_bottom_left_pt[1]) and (start_state[0] >= obstacle_bottom_left_pt[0] and start_state[0] <= obstacle_top_left_pt[0]):
+            # print('Blocked horizontally to the right!')
             return True
         #Check that we do not go through the obstacle right to left
         elif (start_state[1] > obstacle_bottom_right_pt[1] and destination_state[1] <= obstacle_bottom_right_pt[1]) and (start_state[0] >= obstacle_bottom_left_pt[0] and start_state[0] <= obstacle_top_left_pt[0]):
+            # print('Blocked horizontally to the left!')
             return True
 
     return False

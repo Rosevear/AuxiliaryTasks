@@ -13,7 +13,8 @@ ACTION_EFFFECT_SIZE = 0.01
 #On average, the agent acieves what it set out to do, so the man is 0
 ACTION_NOISE_MEAN = 0
 #W want ~99% of the noise to have an effect less than or equal to the action effect size
-ACTION_NOISE_VARIANCE = 0.000
+ACTION_NOISE_VARIANCE = 0.00333
+#ACTION_NOISE_VARIANCE = 0
 
 #Used to scale the range of the noise when using the uniform distribution for generating noise samples
 #ACTION_NOISE_SCALING_FACTOR = 0.01

@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
     parser.add_argument('-l', nargs='?', type=float, default=1.0, help='Lambda parameter specifying the weighting for the auxiliary loss. Ranges from 0 to 1.0 inclusive. Default value = 1.0')
     parser.add_argument('-t', nargs='?', type=float, default=0.90, help='Parameter specifying the eligibility trace for sarsa lambda. Ranges from 0.0 to 1.0, inclusive. Default value = 0.90')
-    parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value for to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
+    parser.add_argument('-e', nargs='?', type=float, default=0.01, help='Epsilon paramter value to be used by the agent when selecting actions epsilon greedy style. Default = 0.01 This represents the minimum value epislon will decay to, since it initially starts at 1')
     parser.add_argument('-a', nargs='?', type=float, default=0.001, help='Alpha parameter which specifies the step size for the update rule. Default value = 0.001')
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. This is currently disabled, and will default to n = 1')

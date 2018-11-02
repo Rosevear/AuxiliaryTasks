@@ -32,7 +32,7 @@ BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 SAMPLES_PER_STEP = 0
 
 #How long to wait before updating the target networks
-NUM_STEPS_TO_UPDATE = 1
+NUM_STEPS_TO_UPDATE = 10000
 
 #How long to wait before actually freezing the network
 MIN_NUM_STEPS_TO_FREEZE = 0

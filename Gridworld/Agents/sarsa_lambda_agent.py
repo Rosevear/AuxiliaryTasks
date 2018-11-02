@@ -48,9 +48,9 @@ def agent_step(reward, state):
 
     next_state = state
 
-    #Update the a_globs.weights
+    #Update delta and the eligibility trace
     delta = reward
-    a_globs.cur_state_feature_indices = approx_value(a_globs.cur_state, a_globs.cur_action, a_globs.weights)[1]
+    _, a_globs.cur_state_feature_indices = approx_value(a_globs.cur_state, a_globs.cur_action, a_globs.weights)
     for index in a_globs.cur_state_feature_indices:
         delta = delta - a_globs.weights[0][index]
         a_globs.e_trace[0][index] = 1
@@ -62,7 +62,8 @@ def agent_step(reward, state):
     else:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
-    next_state_feature_indices = approx_value(next_state, next_action, a_globs.weights)[1]
+    #Update the a_globs.weights
+    _, next_state_feature_indices = approx_value(next_state, next_action, a_globs.weights)
     for index in next_state_feature_indices:
         delta = delta + a_globs.GAMMA * a_globs.weights[0][index]
     a_globs.weights += (a_globs.ALPHA / a_globs.NUM_TILINGS) * delta * a_globs.e_trace

@@ -123,13 +123,13 @@ def approx_value(state, action, weights):
     and the indices for the active features for the for the state action pair.
     """
     if a_globs.IS_DISCRETE:
-        scaled_column = a_globs.NUM_TILINGS * state[0] / (e_globs.MAX_COLUMN + abs(e_globs.MIN_COLUMN))
-        scaled_row = a_globs.NUM_TILINGS * state[1] / (e_globs.MAX_ROW + abs(e_globs.MIN_ROW))
+        scaled_row = a_globs.NUM_TILINGS * state[0] / (e_globs.MAX_ROW + abs(e_globs.MIN_ROW))
+        scaled_column = a_globs.NUM_TILINGS * state[1] / (e_globs.MAX_COLUMN + abs(e_globs.MIN_COLUMN))
     else:
-        scaled_column = a_globs.NUM_TILINGS * state[0] / (cont_e_globs.MAX_COLUMN + abs(cont_e_globs.MIN_COLUMN))
-        scaled_row = a_globs.NUM_TILINGS * state[1] / (cont_e_globs.MAX_ROW + abs(cont_e_globs.MIN_ROW))
+        scaled_row = a_globs.NUM_TILINGS * state[0] / (cont_e_globs.MAX_ROW + abs(cont_e_globs.MIN_ROW))
+        scaled_column = a_globs.NUM_TILINGS * state[1] / (cont_e_globs.MAX_COLUMN + abs(cont_e_globs.MIN_COLUMN))
 
-    cur_tiles = tiles(a_globs.iht, a_globs.NUM_TILINGS, [scaled_column, scaled_row], [action])
+    cur_tiles = tiles(a_globs.iht, a_globs.NUM_TILINGS, [scaled_row, scaled_column], [action])
     estimate = 0
 
     for tile in cur_tiles:
