@@ -18,7 +18,7 @@ import copy
 
 from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
-from keras.initializers import he_normal
+from keras.initializers import he_normal, glorot_uniform
 from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 
