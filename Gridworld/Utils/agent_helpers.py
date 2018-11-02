@@ -272,7 +272,7 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
     for the number of states per observation
     """
 
-    #Construct the historical context used in the prediciton tasks, and store them in the replay buffer according to their reward valence
+    #Construct the historical context used in the prediction tasks, and store them in the replay buffer according to their reward valence
     a_globs.cur_context.append(cur_state)
     a_globs.cur_context_actions.append(cur_action)
     if len(a_globs.cur_context) == a_globs.N or a_globs.AGENT == a_globs.NEURAL:
@@ -295,7 +295,6 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
                 add_to_buffer(a_globs.deterministic_state_buffer, cur_observation)
 
         elif a_globs.AGENT == a_globs.NEURAL:
-            #print('ADD for neural!')
             add_to_buffer(a_globs.generic_buffer, cur_observation)
         else:
             if reward == 0:
@@ -306,9 +305,6 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
 def construct_observation(cur_states, cur_actions, reward, next_state):
     "Construct the observation used by the auxiliary tasks"
 
-    # if len(cur_states) == 0:
-    #     print('empty states!')
-    #     print(a_globs.cur_context)
     cur_observation = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
     cur_observation.states = list(cur_states)
     cur_observation.actions = list(cur_actions)
@@ -319,36 +315,47 @@ def construct_observation(cur_states, cur_actions, reward, next_state):
 
 def add_to_buffer(cur_buffer, item_to_add):
     """
-    Append item_to_add to cur_buffer, maintaining the buffer to be within
-    the size of the BUFFER_SIZE parameter by removing earlier items if necessary
+    Append item_to_add to cur_buffer, removing a prior entry if sum of all buffer sizes = BUFFER_SIZE parameter
     """
 
-    if len(cur_buffer) > a_globs.BUFFER_SIZE:
+    cur_buffer_size = 0
+    for sub_buffer in a_globs.buffer_container:
+        cur_buffer_size += len(sub_buffer)
+    if cur_buffer_size == a_globs.BUFFER_SIZE:
         cur_buffer.pop(0)
     cur_buffer.append(item_to_add)
 
 def do_buffer_sampling():
-    "Determine from which buffer to sample, if any, based on the agent and environment type"
+    "Determine from which buffer(s) to sample based on the current agent and environment type"
 
-    cur_observation = None
-    if a_globs.zero_reward_buffer and a_globs.non_zero_reward_buffer and a_globs.AGENT != a_globs.STATE:
+    if a_globs.AGENT == a_globs.REWARD:
         cur_observation = sample_from_buffers(a_globs.zero_reward_buffer, a_globs.non_zero_reward_buffer)
-    elif a_globs.AGENT == a_globs.STATE  and a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer and a_globs.stochastic_state_buffer:
-            cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer)
-    elif a_globs.AGENT == a_globs.STATE  and not a_globs.IS_STOCHASTIC:
-        if a_globs.deterministic_state_buffer:
-            cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
-    elif a_globs.generic_buffer:
+    elif a_globs.AGENT == a_globs.STATE and a_globs.IS_STOCHASTIC:
+        cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer)
+    elif a_globs.AGENT == a_globs.STATE and not a_globs.IS_STOCHASTIC:
+        cur_observation = sample_from_buffers(a_globs.deterministic_state_buffer)
+    elif a_globs.NEURAL:
         cur_observation = sample_from_buffers(a_globs.generic_buffer)
-
+    else:
+        exit("ERROR: Attempting to sample from a buffer with an agent ({}) for which no replay buffer is defined!".format(a_globs.AGENT))
 
     return cur_observation
 
+def buffers_are_ready(buffer_container, buffer_size):
+    "Return whether all of the buffers in buffer_container are non empty and that their sum adds up to buffer_size"
+
+    cur_buffer_size = 0
+    for sub_buffer in buffer_container:
+        if not sub_buffer:
+            return False
+        cur_buffer_size += len(sub_buffer)
+    return cur_buffer_size == buffer_size
+
+
 def sample_from_buffers(buffer_one, buffer_two=None):
     """
-    Sample a transition uniformly at random from one of buffer_one and buffer_two.
-    but with even probability from each buffer
+    Pick from one of buffer one and buffer two according to the buffer probability parameter.
+    Then samples uniformly at random from the chosen buffer.
     """
     if buffer_two is None or rand_un() <= a_globs.BUFFER_SAMPLE_BIAS_PROBABILITY:
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]

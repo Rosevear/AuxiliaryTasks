@@ -60,7 +60,10 @@ cur_state = None
 cur_action = None
 cur_context = None
 
-#Neural network singel task
+#The buffer that holds all of the sub buffers (which are used to do biased sampling)
+buffer_container = None
+
+#Buffer for single-task neural network
 generic_buffer = None
 
 #Sarsa lambda agent
@@ -74,12 +77,10 @@ observed_state_action_pairs = None
 observed_states = None
 model = None
 target_network = None
+
+#Buffers for various auxiliary tasks
 zero_reward_buffer = None
-zero_buffer_count = None
 non_zero_reward_buffer = None
-non_zero_buffer_count = None
 deterministic_state_buffer = None
-deterministic_state_buffer_count = None
 stochastic_state_buffer = None
-stochastic_state_buffer_count = None
 cur_context_actions = None

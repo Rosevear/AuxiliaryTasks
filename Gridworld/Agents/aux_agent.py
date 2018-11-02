@@ -22,7 +22,7 @@ import copy
 
 from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
-from keras.initializers import he_normal
+from keras.initializers import he_normal, glorot_uniform
 from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 
@@ -38,22 +38,21 @@ def agent_init():
     a_globs.cur_epsilon = a_globs.EPSILON
     print("Epsilon at run start: {}".format(a_globs.cur_epsilon))
 
-    #Initialize the replay buffers for use by the auxiliary prediction tasks
-    a_globs.non_zero_reward_buffer = []
-    a_globs.zero_reward_buffer = []
-
-    a_globs.deterministic_state_buffer = []
-    a_globs.stochastic_state_buffer = []
-
     if a_globs.AGENT == a_globs.REWARD:
         num_outputs = 1
         cur_activation = 'sigmoid'
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
+        a_globs.non_zero_reward_buffer = []
+        a_globs.zero_reward_buffer = []
+        a_globs.main_buffer = [a_globs.non_zero_reward_buffer, a_globs.zero_reward_buffer]
 
     elif a_globs.AGENT == a_globs.NOISE:
         num_outputs = a_globs.NUM_NOISE_NODES
         cur_activation = 'linear'
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
+
+        a_globs.generic_buffer = []
+        a_globs.main_buffer = [a_globs.generic_buffer]
 
     elif a_globs.AGENT == a_globs.STATE :
         num_outputs = a_globs.FEATURE_VECTOR_SIZE
@@ -63,10 +62,17 @@ def agent_init():
         else:
             loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
+        a_globs.deterministic_state_buffer = []
+        a_globs.stochastic_state_buffer = []
+        a_globs.main_buffer = [a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer]
+
     elif a_globs.AGENT == a_globs.REDUNDANT:
         num_outputs = a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS
         cur_activation = 'linear'
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
+
+        a_globs.generic_buffer = []
+        a_globs.main_buffer = [a_globs.generic_buffer]
 
     #Specify the model
     init_weights = he_normal()

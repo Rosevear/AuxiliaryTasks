@@ -35,12 +35,13 @@ def agent_init():
 
     a_globs.cur_epsilon = a_globs.EPSILON
 
-    #Initialize a generic replay buffers
+    #The main buffer contains all of the sub buffers used to store different types of states, to support biased sampling
     a_globs.generic_buffer = []
+    a_globs.buffer_container = [a_globs.generic_buffer]
 
     #Initialize the neural network
     a_globs.model = Sequential()
-    init_weights = glorot_uniform()
+    init_weights = he_normal()
 
     a_globs.model.add(Dense(164, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
     a_globs.model.add(Dense(150, activation='relu', kernel_initializer=init_weights))
@@ -92,34 +93,36 @@ def agent_step(reward, state):
     q_vals[0][a_globs.cur_action] = cur_action_target
 
     #Update the weights
-    print('single update')
-    print('input')
-    print(cur_state_formatted)
-    print('target')
-    print(q_vals)
-    a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
+    # print('single update')
+    # print('input')
+    # print(cur_state_formatted)
+    # print('target')
+    # print(q_vals)
+    #a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
     #Check and see if the relevant buffer is non-empty
-    #TODO: Put an actual length check here instead of just sampling from the buffer
-    observation_present = do_buffer_sampling()
-    if observation_present and a_globs.BATCH_SIZE > 0:
+    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE):
 
-        print('I am replay buffer!')
+        #print('I am replay buffer!')
         #Create the target training batch
         batch_inputs = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.FEATURE_VECTOR_SIZE,))
         batch_targets = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.NUM_ACTIONS))
 
+        #Add the current observation to the mini-batch
+        batch_inputs[0] = cur_state_formatted
+        batch_targets[0] = q_vals
+
         #Use the replay buffer to learn from previously visited states
-        for i in range(a_globs.BATCH_SIZE):
+        for i in range(1, a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
-            print('states')
-            print(cur_observation.states)
-            print('actions')
-            print(cur_observation.actions)
-            print('reward')
-            print(cur_observation.reward)
-            print('next state')
-            print(cur_observation.next_state)
+            # print('states')
+            # print(cur_observation.states)
+            # print('actions')
+            # print(cur_observation.actions)
+            # print('reward')
+            # print(cur_observation.reward)
+            # print('next state')
+            # print(cur_observation.next_state)
             #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
 
             most_recent_obs_state = cur_observation.states[-1]
@@ -146,14 +149,15 @@ def agent_step(reward, state):
             batch_inputs[i] = sampled_state_formatted
             batch_targets[i] = q_vals
 
-        print('Fit ME')
-        print('batch inputs')
-        print(batch_inputs)
-        print('batch targets')
-        print(batch_targets)
+        # print('Fit ME')
+        # print('batch inputs')
+        # print(batch_inputs)
+        # print('batch targets')
+        # print(batch_targets)
+
+        #Update the weights using the sampled batch
         a_globs.model.fit(batch_inputs, batch_targets, batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
-#
     if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
         update_target_network()
 
