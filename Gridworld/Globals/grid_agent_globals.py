@@ -29,11 +29,11 @@ NUM_REDUNDANT_TASKS = 5
 BUFFER_SIZE = 1000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
-#The number of times sample from the rexperience eplay buffer per time step
-SAMPLES_PER_STEP = 0
+#The number of samples to select from the replay buffer on each time step
+BATCH_SIZE = 10
 
 #How long to wait before updating the target networks
-NUM_STEPS_TO_UPDATE = 1000
+NUM_STEPS_TO_UPDATE = 1
 
 
 HOT_SUFFIX = 'hot'

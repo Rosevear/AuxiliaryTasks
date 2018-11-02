@@ -91,37 +91,41 @@ def agent_step(reward, state):
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
     q_vals[0][a_globs.cur_action] = cur_action_target
 
-
     #Update the weights
+    print('single update')
+    print('input')
+    print(cur_state_formatted)
+    print('target')
+    print(q_vals)
     a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
     #Check and see if the relevant buffer is non-empty
     #TODO: Put an actual length check here instead of just sampling from the buffer
     observation_present = do_buffer_sampling()
-    if observation_present and a_globs.SAMPLES_PER_STEP > 0:
+    if observation_present and a_globs.BATCH_SIZE > 0:
 
-        #print('I am replay buffer!')
+        print('I am replay buffer!')
         #Create the target training batch
-        # batch_inputs = np.zeros(shape=(a_globs.SAMPLES_PER_STEP, a_globs.FEATURE_VECTOR_SIZE,))
-        # batch_targets = np.zeros(shape=(a_globs.SAMPLES_PER_STEP, a_globs.NUM_ACTIONS))
+        batch_inputs = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.FEATURE_VECTOR_SIZE,))
+        batch_targets = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.NUM_ACTIONS))
 
         #Use the replay buffer to learn from previously visited states
-        for i in range(a_globs.SAMPLES_PER_STEP):
+        for i in range(a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
-            # print('states')
-            # print(cur_observation.states)
-            # print('actions')
-            # print(cur_observation.actions)
-            # print('reward')
-            # print(cur_observation.reward)
-            # print('next state')
-            # print(cur_observation.next_state)
+            print('states')
+            print(cur_observation.states)
+            print('actions')
+            print(cur_observation.actions)
+            print('reward')
+            print(cur_observation.reward)
+            print('next state')
+            print(cur_observation.next_state)
             #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
-            #print('cur obs in learning')
-            #print(cur_observation.states)
+
             most_recent_obs_state = cur_observation.states[-1]
             sampled_state_formatted = format_states([most_recent_obs_state])
             sampled_next_state_formatted = format_states([cur_observation.next_state])
+
             # print('sampled_state_formatted')
             # print(sampled_state_formatted)
             # print('sample state next formatted')
@@ -135,12 +139,19 @@ def agent_step(reward, state):
             q_vals = a_globs.model.predict(sampled_state_formatted, batch_size=1)
             q_vals[0][a_globs.cur_action] = cur_action_target
 
-            # batch_inputs[i] = sampled_state_formatted
-            # batch_targets[i] = q_vals
-
+            # print('sampled_state_formatted')
             # print(sampled_state_formatted)
+            # print('q vals')
             # print(q_vals)
-            a_globs.model.fit(sampled_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
+            batch_inputs[i] = sampled_state_formatted
+            batch_targets[i] = q_vals
+
+        print('Fit ME')
+        print('batch inputs')
+        print(batch_inputs)
+        print('batch targets')
+        print(batch_targets)
+        a_globs.model.fit(batch_inputs, batch_targets, batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
 #
     if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
