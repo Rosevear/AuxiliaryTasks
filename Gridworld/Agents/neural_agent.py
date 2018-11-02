@@ -40,7 +40,7 @@ def agent_init():
 
     #Initialize the neural network
     a_globs.model = Sequential()
-    init_weights = he_normal()
+    init_weights = glorot_uniform()
 
     a_globs.model.add(Dense(164, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
     a_globs.model.add(Dense(150, activation='relu', kernel_initializer=init_weights))
@@ -143,7 +143,7 @@ def agent_step(reward, state):
             a_globs.model.fit(sampled_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
 #
-    if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0 or RL_num_steps() <= a_globs.MIN_NUM_STEPS_TO_FREEZE:
+    if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
         update_target_network()
 
     a_globs.cur_state = next_state

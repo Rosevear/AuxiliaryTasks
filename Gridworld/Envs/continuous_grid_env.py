@@ -2,8 +2,9 @@
 
 from __future__ import division
 
-import Globals.continuous_grid_env_globals as e_globs
+import Globals.continuous_grid_env_globals as cont_e_globs
 from Utils.utils import rand_norm, rand_in_range, rand_un
+from numpy import random
 
 import numpy as np
 import json
@@ -12,75 +13,76 @@ def env_init():
     return
 
 def env_start():
-    e_globs.current_state
-    e_globs.current_state = e_globs.START_STATE
-    return e_globs.current_state
+    cont_e_globs.current_state
+    cont_e_globs.current_state = cont_e_globs.START_STATE
+    return cont_e_globs.current_state
 
 def env_step(action):
 
-    if not action in e_globs.ACTION_SET:
+    if not action in cont_e_globs.ACTION_SET:
         print "Invalid action taken!!"
         print "action : ", action
-        print "e_globs.current_state : ", e_globs.current_state
+        print "cont_e_globs.current_state : ", cont_e_globs.current_state
         exit(1)
 
 
-    old_state = e_globs.current_state
-    cur_row = e_globs.current_state[0]
-    cur_column = e_globs.current_state[1]
+    old_state = cont_e_globs.current_state
+    cur_row = cont_e_globs.current_state[0]
+    cur_column = cont_e_globs.current_state[1]
 
     #Change the state based on the agent action and some noise
-    noise = rand_norm(e_globs.ACTION_NOISE_MEAN, e_globs.ACTION_NOISE_VARIANCE)
-    state_modifier = e_globs.ACTION_EFFFECT_SIZE + noise
-    if action == e_globs.NORTH:
-        e_globs.current_state = [cur_row + state_modifier, cur_column]
-    elif action == e_globs.EAST:
-        e_globs.current_state = [cur_row, cur_column + state_modifier]
-    elif action == e_globs.SOUTH:
-        e_globs.current_state = [cur_row - state_modifier, cur_column]
-    elif action == e_globs.WEST:
-        e_globs.current_state = [cur_row, cur_column - state_modifier]
+    #noise = rand_norm(cont_e_globs.ACTION_NOISE_MEAN, cont_e_globs.ACTION_NOISE_VARIANCE)
+    noise = random.uniform(-cont_e_globs.ACTION_NOISE_UNIFORM_RANGE, cont_e_globs.ACTION_NOISE_UNIFORM_RANGE)
+    state_modifier = cont_e_globs.ACTION_EFFFECT_SIZE + noise
+    if action == cont_e_globs.NORTH:
+        cont_e_globs.current_state = [cur_row + state_modifier, cur_column]
+    elif action == cont_e_globs.EAST:
+        cont_e_globs.current_state = [cur_row, cur_column + state_modifier]
+    elif action == cont_e_globs.SOUTH:
+        cont_e_globs.current_state = [cur_row - state_modifier, cur_column]
+    elif action == cont_e_globs.WEST:
+        cont_e_globs.current_state = [cur_row, cur_column - state_modifier]
 
     #Enforce the constraint that actions do not leave the grid world, except for when they lead to exceeding the goal state
-    if not is_goal_state(e_globs.current_state):
-        if e_globs.current_state[0] > e_globs.MAX_ROW:
-            e_globs.current_state[0] = e_globs.MAX_ROW
-        elif e_globs.current_state[0] < e_globs.MIN_ROW:
-            e_globs.current_state[0] = e_globs.MIN_ROW
+    if not is_goal_state(cont_e_globs.current_state):
+        if cont_e_globs.current_state[0] > cont_e_globs.MAX_ROW:
+            cont_e_globs.current_state[0] = cont_e_globs.MAX_ROW
+        elif cont_e_globs.current_state[0] < cont_e_globs.MIN_ROW:
+            cont_e_globs.current_state[0] = cont_e_globs.MIN_ROW
 
-        if e_globs.current_state[1] > e_globs.MAX_COLUMN:
-            e_globs.current_state[1] = e_globs.MAX_COLUMN
-        elif e_globs.current_state[1] < e_globs.MIN_COLUMN:
-            e_globs.current_state[1] = e_globs.MIN_COLUMN
+        if cont_e_globs.current_state[1] > cont_e_globs.MAX_COLUMN:
+            cont_e_globs.current_state[1] = cont_e_globs.MAX_COLUMN
+        elif cont_e_globs.current_state[1] < cont_e_globs.MIN_COLUMN:
+            cont_e_globs.current_state[1] = cont_e_globs.MIN_COLUMN
 
     #Enforce the constraint that some squares are out of bounds, so we go nowhere if we try to step into or through them
-    if agent_is_blocked(old_state, e_globs.current_state):
-       e_globs.current_state = old_state
+    if agent_is_blocked(old_state, cont_e_globs.current_state):
+       cont_e_globs.current_state = old_state
 
     # print('old state')
     # print(old_state)
     # print('action')
     # print(action)
     # print('new state')
-    # print(e_globs.current_state)
+    # print(cont_e_globs.current_state)
 
     #Set the reward structure for the environment
-    if e_globs.IS_SPARSE:
-        if is_goal_state(e_globs.current_state):
+    if cont_e_globs.IS_SPARSE:
+        if is_goal_state(cont_e_globs.current_state):
             is_terminal = True
             reward = 1
         else:
             is_terminal = False
             reward = 0
     else:
-        if is_goal_state(e_globs.current_state):
+        if is_goal_state(cont_e_globs.current_state):
             is_terminal = True
             reward = 0
         else:
             is_terminal = False
             reward = -1
 
-    result = {"reward": reward, "state": e_globs.current_state, "isTerminal": is_terminal}
+    result = {"reward": reward, "state": cont_e_globs.current_state, "isTerminal": is_terminal}
 
     return result
 
@@ -91,7 +93,7 @@ def env_message(in_message):
     """
     """
     params = json.loads(in_message)
-    e_globs.IS_SPARSE = params['IS_SPARSE']
+    cont_e_globs.IS_SPARSE = params['IS_SPARSE']
 
     return
 
@@ -100,7 +102,7 @@ def is_goal_state(state):
     Return whether the agent is appropriately close enough to the goal state to
     terminate the current episode.
     """
-    return np.isclose(state[0], e_globs.GOAL_STATE[0], rtol=e_globs.GOAL_STATE_RELATIVE_TOLERANCE, atol=e_globs.GOAL_STATE_ABSOLUTE_TOLERANCE, equal_nan=False) and np.isclose(state[1], e_globs.GOAL_STATE[1], rtol=0.001, atol=0.001, equal_nan=False)
+    return np.isclose(state[0], cont_e_globs.GOAL_STATE[0], rtol=cont_e_globs.GOAL_STATE_RELATIVE_TOLERANCE, atol=cont_e_globs.GOAL_STATE_ABSOLUTE_TOLERANCE, equal_nan=False) and np.isclose(state[1], cont_e_globs.GOAL_STATE[1], rtol=0.001, atol=0.001, equal_nan=False)
 
 #NOTE: What about edge cases where you walk into the top/bottom of a horizontal obstacle?
 #To handle this, we check all obstacle types, rather than differentiating based on the action taken
@@ -125,7 +127,7 @@ def is_blocked_vertically(start_state, destination_state):
     # print('destination')
     # print(destination_state)
 
-    for obstacle in e_globs.VERTICAL_MOVEMENT_OBSTACLES:
+    for obstacle in cont_e_globs.VERTICAL_MOVEMENT_OBSTACLES:
         obstacle_bottom_left_pt = obstacle[0]
         obstacle_top_left_pt = obstacle[1]
         obstacle_bottom_right_pt = obstacle[3]
@@ -158,7 +160,7 @@ def is_blocked_horizontally(start_state, destination_state):
     # print('destination')
     # print(destination_state)
 
-    for obstacle in e_globs.HORIZONTAL_MOVEMENT_OBSTACLES:
+    for obstacle in cont_e_globs.HORIZONTAL_MOVEMENT_OBSTACLES:
         obstacle_bottom_left_pt = obstacle[0]
         obstacle_top_left_pt = obstacle[1]
         obstacle_bottom_right_pt = obstacle[3]

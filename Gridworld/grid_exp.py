@@ -147,7 +147,7 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.NEURAL]
+AGENTS = [a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 
