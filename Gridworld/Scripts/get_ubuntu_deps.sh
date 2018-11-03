@@ -25,5 +25,5 @@ source bin/activate
 
 #Clone the repo, enter it, and install python dependencies
 git clone https://github.com/Rosevear/AuxiliaryTasks.git
-cd Auxiliary-Tasks
-python pip install -r requirements.txt
+cd AuxiliaryTasks
+pip install -r requirements.txt
