@@ -4,7 +4,7 @@ LAMBDA = None
 ALPHA = None
 GAMMA = None
 EPSILON_MIN = None
-EPSILON_DECAY_RATE = 0.1
+EPSILON_DECAY_RATE = 0.05
 N = None
 
 #For Sarsa agent specifically
@@ -30,11 +30,10 @@ BUFFER_SIZE = 1000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #The number of samples to select from the replay buffer on each time step
-BATCH_SIZE = 10
+BATCH_SIZE = 1
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1
-
 
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'

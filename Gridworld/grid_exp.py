@@ -131,19 +131,23 @@ def save_results(results, cur_agent, filename='Default File Name'):
 def send_params(cur_agent, param_setting):
     "Send the specified agent and environment parameters to be used in the current run"
 
-    print(param_setting)
+    #print(param_setting)
     if cur_agent in AUX_AGENTS:
         agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
+    elif cur_agent == a_globs.NEURAL and args.sweep_neural:
+        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "BUFFER_SIZE": param_setting[3], "NUM_STEPS_TO_UPDATE": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
     else:
-        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "TRACE": param_setting[3], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
+        agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "TRACE": trace_params[0], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
     enviro_params = {"NUM_ACTIONS": NUM_ACTIONS, "IS_STOCHASTIC": IS_STOCHASTIC, "IS_SPARSE": IS_SPARSE}
     RL_agent_message(json.dumps(agent_params))
     RL_env_message(json.dumps(enviro_params))
 
 ###### HELPER FUNCTIONS END #################
 
+#TODO: Make agents selectable as either a single agent or a list of agents.
+#TODO: Make it so that user can specify the arguments to sweep
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
-#TODO: Fix the per parameter setting display with the trace parameter: having that is messing up the dictionary merging
+#TODO: If worth it, consider making trace a sweepable parameter.
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
@@ -152,6 +156,9 @@ AGENTS = [a_globs.NEURAL]
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
+    #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
+    #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
+    #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
     parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
@@ -167,8 +174,9 @@ if __name__ == "__main__":
     parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment')
     parser.add_argument('--continuous', action='store_true', help='Specify whether to use the continuous gridworld environment')
     parser.add_argument('--stochastic', action='store_true', help='Specify whether to train the agent with stochastic obstacle states, rather than simple wall states that the agent can\'t pass through.')
-    parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state.')
-    parser.add_argument('--sweep', action='store_true', help='Specify whether the agent should ignore the input parameters provided (alpha and experience buffer size) and do a parameter sweep')
+    parser.add_argument('--sparse', action='store_true', help='Specify whether the environment reward structure is rich or sparse. Rich rewards include -1 at every non-terminal state and 0 at the terminal state. Sparse rewards include 0 at every non-terminal state, and 1 at the terminal state')
+    parser.add_argument('--sweep', action='store_true', help='Specify whether the program should ignore the input parameters provided and do a parameter sweep over all of its possible parameters and compare the best parameter setting per agent as well as all agent\'s at each parameter setting. See grid_exp.py to set the parameters that are swept over')
+    parser.add_argument('--sweep_neural', action='store_true', help='Sweep the parameters of the single task neural network and display the results on a single plot. Parameters swept: alpha, buffer_size, target_network update size.')
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
     parser.add_argument('--values', action='store_true', help='Whether to plot the value function plot for each agent. Default = false')
 
@@ -178,7 +186,7 @@ if __name__ == "__main__":
     float_params = [args.e, args.a, args.g, args.l, args.t]
     for param in float_params:
         if param < 0.0 or param > 1.0:
-            exit("Epsilon, Alpha, Gamma, Lambda, and Eligibility trace, parameters must be a value between 0 and 1, inclusive.")
+            exit("Epsilon, Alpha, Gamma, Lambda, and Trace, parameters must be a value between 0 and 1, inclusive.")
 
     if args.actions not in VALID_MOVE_SETS:
         exit("The valid move sets are 4, 8, and 9. Please choose one of those.")
@@ -197,19 +205,26 @@ if __name__ == "__main__":
 
         IS_SWEEP = True
         alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
-        #alpha_params = [1, 0.1]
         gamma_params = GAMMA = [0.99]
-        #lambda_params = sample_params_log_uniform(0.001, 1, 6)
         lambda_params = [1.0, 0.75, 0.50, 0.25, 0.10, 0.05]
-        #lambda_params = [1]
         trace_params = [0.90]
         replay_context_sizes = [1]
+
+        #alpha_params = [1, 0.1]
+        #lambda_params = sample_params_log_uniform(0.001, 1, 6)
+        #lambda_params = [1]
 
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
         print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
 
+    elif args.sweep_neural:
+        alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
+        gamma_params = [0.99]
+        alpha_params = [0.001, 0.005, 0.01]
+        buffer_size_params = [100, 1000, 10000]
+        update_freq_params = [100, 1000, 10000]
+
     else:
-        IS_SWEEP = False
         alpha_params = [args.a]
         gamma_params = [args.g]
         lambda_params = [args.l]
@@ -228,7 +243,10 @@ if __name__ == "__main__":
     num_runs = args.run
 
     #The main experiment loop
-    all_params = list(product(AGENTS, alpha_params, gamma_params, trace_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
+    if not args.sweep_neural:
+        all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
+    else:
+        all_params = list(product([a_globs.NEURAL], alpha_params, gamma_params, buffer_size_params, update_freq_params))
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
@@ -236,20 +254,23 @@ if __name__ == "__main__":
         cur_agent = param_setting[0]
 
         #Load the appropriate agent and environment files
-        if cur_agent in AGENTS:
+        if cur_agent == a_globs.SARSA_LAMBDA:
+            print("Training agent: {} with alpha = {} gamma = {} trace = {}".format(param_setting[0], param_setting[1], param_setting[2], trace_params[0]))
             RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+        elif cur_agent == a_globs.NEURAL and args.sweep_neural:
+            print("Training agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
+            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+        elif cur_agent in AGENTS:
+            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+            print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
         elif cur_agent in AUX_AGENTS:
+            print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
             RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.aux_agent".format(AGENT_DIR))
         else:
-            exit('ERROR: Invalid agent string provided!')
-
-        if cur_agent in AUX_AGENTS:
-            print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
-        else:
-            print("Training agent: {} with alpha = {} gamma = {} trace = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3]))
+            exit('ERROR: Invalid agent string {} provided!'.format(cur_agent))
 
         cur_param_results = []
-        for run in range(1, num_runs + 1):
+        for run in range(num_runs):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
             np.random.seed(run)
             random.seed(run)
@@ -274,7 +295,7 @@ if __name__ == "__main__":
         #print(all_results)
 
     #Process and plot the results
-    if IS_SWEEP:
+    if args.sweep:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
         all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
         param_setting_results = {param_tuple : {} for param_tuple in all_params_no_agent}
@@ -319,8 +340,8 @@ if __name__ == "__main__":
         setup_plot()
         do_plotting()
 
-        print('param setting results pre merge')
-        print(param_setting_results)
+        #print('param setting results pre merge')
+        #print(param_setting_results)
 
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
         reg_agent_param_settings = list(product(alpha_params, gamma_params))
@@ -332,20 +353,20 @@ if __name__ == "__main__":
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
-        print('param setting results post merge')
-        print(param_setting_results)
+        #print('param setting results post merge')
+        #print(param_setting_results)
         for param_setting in param_setting_results:
             plt.clf()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
-            print('param setting')
-            print(param_setting)
-            print('param setting keys')
-            print(cur_param_setting_result.keys())
+            #print('param setting')
+            #print(param_setting)
+            #print('param setting keys')
+            #print(cur_param_setting_result.keys())
             for agent in cur_param_setting_result.keys():
 
-                print('param setting data')
-                print(cur_param_setting_result[agent].data)
+                #print('param setting data')
+                #print(cur_param_setting_result[agent].data)
 
                 save_results(cur_param_setting_result[agent].data, agent, ''.join([RESULTS_FILE_NAME, str(file_name_suffix)]))
                 episodes = [episode for episode in range(num_episodes)]
@@ -359,6 +380,22 @@ if __name__ == "__main__":
             setup_plot()
             do_plotting(file_name_suffix)
             file_name_suffix += 1
+
+    elif args.sweep_neural:
+        for i in range(len(all_results)):
+            cur_agent = all_param_settings[i][0]
+            if cur_agent != a_globs.NEURAL:
+                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+            cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            episodes = [episode for episode in range(num_episodes)]
+
+            save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
+
+            plt.figure()
+            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+            setup_plot()
+            do_plotting(i)
+            plt.clf()
 
     else:
         #Average the results over all of the runs for the single paramters setting provided

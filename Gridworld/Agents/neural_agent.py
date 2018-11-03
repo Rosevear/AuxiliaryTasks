@@ -172,6 +172,8 @@ def agent_end(reward):
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
     q_vals[0][a_globs.cur_action] = reward
     a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=1)
+    #print('Current weights')
+    #print(a_globs.model.get_weights())
 
     return
 
@@ -208,6 +210,12 @@ def agent_message(in_message):
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_ROWS * e_globs.NUM_COLUMNS
         else:
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES
+
+        if 'BUFFER_SIZE' in params.keys():
+            a_globs.BUFFER_SIZE = params['BUFFER_SIZE']
+
+        if 'NUM_STEPS_TO_UPDATE' in params.keys():
+            a_globs.NUM_STEPS_TO_UPDATE = params['NUM_STEPS_TO_UPDATE']
 
         #These parameters are for auxiliary tasks only, and always occur together
         if 'N' in params and 'LAMBDA' in params:
