@@ -6,9 +6,9 @@ import Globals.grid_agent_globals as a_globs
 import Globals.grid_env_globals as e_globs
 import Globals.continuous_grid_env_globals as cont_e_globs
 from Globals.generic_globals import *
-
-from Utils.utils import rand_in_range, rand_un
 from Utils.agent_helpers import *
+from Utils.utils import rand_in_range, rand_un
+
 from rl_glue import RL_num_episodes, RL_num_steps
 from collections import namedtuple
 from random import randint
@@ -44,7 +44,7 @@ def agent_init():
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
         a_globs.non_zero_reward_buffer = []
         a_globs.zero_reward_buffer = []
-        a_globs.main_buffer = [a_globs.non_zero_reward_buffer, a_globs.zero_reward_buffer]
+        a_globs.buffer_container = [a_globs.non_zero_reward_buffer, a_globs.zero_reward_buffer]
 
     elif a_globs.AGENT == a_globs.NOISE:
         num_outputs = a_globs.NUM_NOISE_NODES
@@ -52,7 +52,7 @@ def agent_init():
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
         a_globs.generic_buffer = []
-        a_globs.main_buffer = [a_globs.generic_buffer]
+        a_globs.buffer_container = [a_globs.generic_buffer]
 
     elif a_globs.AGENT == a_globs.STATE :
         num_outputs = a_globs.FEATURE_VECTOR_SIZE
@@ -64,7 +64,10 @@ def agent_init():
 
         a_globs.deterministic_state_buffer = []
         a_globs.stochastic_state_buffer = []
-        a_globs.main_buffer = [a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer]
+        if a_globs.IS_STOCHASTIC:
+            a_globs.buffer_container = [a_globs.deterministic_state_buffer, a_globs.stochastic_state_buffer]
+        else:
+            a_globs.buffer_container = [a_globs.deterministic_state_buffer]
 
     elif a_globs.AGENT == a_globs.REDUNDANT:
         num_outputs = a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS
@@ -72,7 +75,7 @@ def agent_init():
         loss={'main_output': 'mean_squared_error', 'aux_output': 'mean_squared_error'}
 
         a_globs.generic_buffer = []
-        a_globs.main_buffer = [a_globs.generic_buffer]
+        a_globs.buffer_container = [a_globs.generic_buffer]
 
     #Specify the model
     init_weights = he_normal()
@@ -136,7 +139,6 @@ def agent_step(reward, state):
 
 def agent_end(reward):
 
-    update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, a_globs.GOAL_STATE)
     do_auxiliary_learning(a_globs.cur_state, None, reward)
 
     return
@@ -171,10 +173,8 @@ def agent_message(in_message):
 
         if a_globs.IS_1_HOT:
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_ROWS * e_globs.NUM_COLUMNS
-            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE * a_globs.NUM_ACTIONS
         else:
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES
-            a_globs.AUX_FEATURE_VECTOR_SIZE = a_globs.FEATURE_VECTOR_SIZE + 1
 
         #These parameters are for auxiliary tasks only, and always occur together
         if 'N' in params and 'LAMBDA' in params:

@@ -208,12 +208,11 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         #We make the rewards positive since we care only about the binary
         #distinction between zero and non zero rewards and theano binary
         #cross entropy loss requires targets to be 0 or 1
-        aux_target = np.array([reward])
+        aux_target = np.array([[reward]])
     elif a_globs.AGENT == a_globs.STATE :
         if next_state:
             aux_target = format_states([next_state])
         else:
-            #If there is no next state represent the lack of such a state with the zero vector (since 1 hot encoding or shifted x y coordinates will not use this to refer to any actual state)
             aux_target = np.zeros(shape=(1, a_globs.FEATURE_VECTOR_SIZE,))
     elif a_globs.AGENT == a_globs.NOISE:
         aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
@@ -222,31 +221,67 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
 
     cur_state_formatted = format_states([cur_state])
-    a_globs.model.fit(cur_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=0)
 
+    #Check and see if the relevant buffer is non-empty
+    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE):
 
-    #Use the replay buffer to learn from previously visitied states
-    test_observation = do_buffer_sampling()
-    if test_observation and a_globs.SAMPLES_PER_STEP > 0:
-
+        #print('I am replay buffer!')
         #Create the target training batch
-        # batch_inputs = np.array([np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object)), np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object))])
-        # bath_targets = np.array([np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object)), np.empty((1, a_globs.SAMPLES_PER_STEP + 1, object))])
+        # print('aux target')
+        # print(aux_target)
+        # print('shape')
+        # print(aux_target.shape)
+        batch_inputs = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.FEATURE_VECTOR_SIZE,))
+        batch_targets = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.NUM_ACTIONS))
+        batch_aux_targets = np.empty(shape=(a_globs.BATCH_SIZE, aux_target.shape[1]))
 
-        for i in range(a_globs.SAMPLES_PER_STEP):
+        # print('batch aux targets')
+        # print(batch_aux_targets)
+        #
+        # print('aux target 0')
+        # print(aux_target[0])
+        #
+        # print('batch aux tagrets at 0')
+        # print(batch_aux_targets[0])
+
+        #Add the current observation to the mini-batch
+        batch_inputs[0] = cur_state_formatted
+        batch_targets[0] = q_vals
+        batch_aux_targets[0] = aux_target[0]
+
+        # print('post assignment of batch aux target')
+        # print(batch_aux_targets[0])
+
+        #Use the replay buffer to learn from previously visited states
+        for i in range(1, a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
-            #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state
-            #(effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular single task case)
-            #print('cur obs in learning')
-            #print(cur_observation.states)
+            # print('states')
+            # print(cur_observation.states)
+            # print('actions')
+            # print(cur_observation.actions)
+            # print('reward')
+            # print(cur_observation.reward)
+            # print('next state')
+            # print(cur_observation.next_state)
+
+            #NOTE: For now If N > 1 we only want the most recent state associated
+            #with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
             most_recent_obs_state = cur_observation.states[-1]
             sampled_state_formatted = format_states([most_recent_obs_state])
+            sampled_next_state_formatted = format_states([cur_observation.next_state])
+
+            # print('sampled_state_formatted')
+            # print(sampled_state_formatted)
+            # print('sample state next formatted')
+            # print(sampled_next_state_formatted)
 
             #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
             q_vals = get_q_vals_aux(cur_observation.next_state, True)
             cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals))
 
-            #Get the learning target q-value for the current state
+            #Get the value for the current state of the action which was just taken, ie Q(S, A),
+            #and set the target for the specifc action taken (we need to pass in the
+            #whole vector of q_values, since our network takes state only as input)
             q_vals = get_q_vals_aux(most_recent_obs_state, False)
             q_vals[0][a_globs.cur_action] = cur_action_target
 
@@ -254,16 +289,43 @@ def do_auxiliary_learning(cur_state, next_state, reward):
                 #We make the rewards positive since we care only about the binary
                 #distinction between zero and non zero rewards and theano binary
                 #cross entropy loss requires targets to be 0 or 1
-                aux_target = np.array([cur_observation.reward])
+                aux_target = np.array([[cur_observation.reward]])
             elif a_globs.AGENT == a_globs.STATE :
                 aux_target = format_states([cur_observation.next_state])
             elif a_globs.AGENT == a_globs.NOISE:
-                aux_target = np.array([rand_un() for i in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
+                aux_target = np.array([rand_un() for _ in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
             elif a_globs.AGENT == a_globs.REDUNDANT:
-                nested_target = [q_vals for i in range(a_globs.NUM_REDUNDANT_TASKS)]
+                nested_target = [q_vals for _ in range(a_globs.NUM_REDUNDANT_TASKS)]
+                #print('nested_target')
+                #print(nested_target)
                 aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
 
-            a_globs.model.fit(sampled_state_formatted, {'main_output' : q_vals, 'aux_output' : aux_target}, batch_size=1, epochs=1, verbose=is_verbose)
+            #print('batch inpiuts')
+            #print(batch_inputs)
+            # print('sampled_state_formatted')
+            # print(sampled_state_formatted)
+            # print('q vals')
+            # print(q_vals)
+
+            #print(i)
+            batch_inputs[i] = sampled_state_formatted
+            batch_targets[i] = q_vals
+            batch_aux_targets[i] = aux_target[0]
+
+        # print('Fit ME')
+        # print('batch inputs')
+        # print(batch_inputs)
+        # print('batch targets')
+        # print(batch_targets)
+
+        #Update the weights using the sampled batch
+        # print('inputs')
+        # print(batch_inputs)
+        # print('targets')
+        # print(batch_targets)
+        # print('batch aux taergets')
+        # print(batch_aux_targets)
+        a_globs.model.fit(batch_inputs, [batch_targets, batch_aux_targets], batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     """
@@ -288,19 +350,26 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
         #print('after pop')
         #print(a_globs.cur_context)
 
-        if a_globs.AGENT == a_globs.STATE:
-            if  cur_observation.states[-1] in a_globs.OBSTACLE_STATES:
+        if a_globs.AGENT == a_globs.NEURAL:
+                add_to_buffer(a_globs.generic_buffer, cur_observation)
+
+        elif a_globs.AGENT == a_globs.STATE:
+            #TODO: Set up a check for being in a stochastic obstacle case for the continuous case
+            if  cur_observation.states[-1] in e_globs.OBSTACLE_STATES:
                 add_to_buffer(a_globs.stochastic_state_buffer, cur_observation)
             else:
                 add_to_buffer(a_globs.deterministic_state_buffer, cur_observation)
 
-        elif a_globs.AGENT == a_globs.NEURAL:
-            add_to_buffer(a_globs.generic_buffer, cur_observation)
-        else:
+        elif a_globs.AGENT == a_globs.REWARD:
             if reward == 0:
                 add_to_buffer(a_globs.zero_reward_buffer, cur_observation)
             else:
                 add_to_buffer(a_globs.non_zero_reward_buffer, cur_observation)
+
+        elif a_globs.AGENT == a_globs.REDUNDANT or a_globs.AGENT == a_globs.NOISE:
+            add_to_buffer(a_globs.generic_buffer, cur_observation)
+        else:
+            exit("ERROR: Invalid agent specified! No corresponding buffer to use!")
 
 def construct_observation(cur_states, cur_actions, reward, next_state):
     "Construct the observation used by the auxiliary tasks"
@@ -343,11 +412,12 @@ def do_buffer_sampling():
 
 def buffers_are_ready(buffer_container, buffer_size):
     "Return whether all of the buffers in buffer_container are non empty and that their sum adds up to buffer_size"
-
     cur_buffer_size = 0
     for sub_buffer in buffer_container:
-        if not sub_buffer:
-            return False
+        #print('I am ')
+        #print(sub_buffer)
+        # if not sub_buffer:
+        #     return False
         cur_buffer_size += len(sub_buffer)
     return cur_buffer_size == buffer_size
 
@@ -357,6 +427,7 @@ def sample_from_buffers(buffer_one, buffer_two=None):
     Pick from one of buffer one and buffer two according to the buffer probability parameter.
     Then samples uniformly at random from the chosen buffer.
     """
+    #NOTE: Will have to add a check here to force sampling from non empty buffer if I decided to not wait for nonempty buffers of both types in reward/state tasks
     if buffer_two is None or rand_un() <= a_globs.BUFFER_SAMPLE_BIAS_PROBABILITY:
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]
     else:

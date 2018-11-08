@@ -149,9 +149,9 @@ def send_params(cur_agent, param_setting):
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 #TODO: If worth it, consider making trace a sweepable parameter.
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
-AUX_AGENTS = []
+AUX_AGENTS = [a_globs.REDUNDANT]
 #AGENTS = []
-AGENTS = [a_globs.NEURAL]
+AGENTS = []
 
 if __name__ == "__main__":
 
