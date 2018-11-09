@@ -56,6 +56,7 @@ cd Auxiliary-Tasks
 pip install -r requirements.txt
 
 #####TESTING#####
+
 #Run the unit tests for the environment
 
 Navigate to the tests folder and run each individual test file from the command line (e.g): python test_grid_env.py
@@ -63,6 +64,7 @@ Navigate to the tests folder and run each individual test file from the command 
 #TODO: Add tests for experiment and agent files
 
 #####RUNNING#####
+
 #Run the experiments for a particular parameter setting 
 
 python grid_exp.py ARG_OPTIONS (look in grid_exp.py at the arg parser or use the command line to learn about the options)
