@@ -250,6 +250,7 @@ if __name__ == "__main__":
     all_results = []
     all_param_settings = []
     print("Starting the experiment...")
+    i = 0
     for param_setting in all_params:
         cur_agent = param_setting[0]
 
@@ -290,9 +291,22 @@ if __name__ == "__main__":
         all_results.append(cur_param_results)
         all_param_settings.append(param_setting)
 
-        #print(all_param_settings)
-        #print("BREAK")
-        #print(all_results)
+        #Save and plot the results for the current parameter setting
+        if args.sweep_neural:
+            cur_agent = all_param_settings[i][0]
+            if cur_agent != a_globs.NEURAL:
+                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+            cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            episodes = [episode for episode in range(num_episodes)]
+
+            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
+
+            plt.figure()
+            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+            setup_plot()
+            do_plotting(i)
+            plt.clf()
+        i += 1
 
     #Process and plot the results
     if args.sweep:
@@ -381,21 +395,21 @@ if __name__ == "__main__":
             do_plotting(file_name_suffix)
             file_name_suffix += 1
 
-    elif args.sweep_neural:
-        for i in range(len(all_results)):
-            cur_agent = all_param_settings[i][0]
-            if cur_agent != a_globs.NEURAL:
-                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
-            cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            episodes = [episode for episode in range(num_episodes)]
-
-            save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
-
-            plt.figure()
-            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-            setup_plot()
-            do_plotting(i)
-            plt.clf()
+    # elif args.sweep_neural:
+    #     for i in range(len(all_results)):
+    #         cur_agent = all_param_settings[i][0]
+    #         if cur_agent != a_globs.NEURAL:
+    #             exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+    #         cur_data = [np.mean(run) for run in zip(*all_results[i])]
+    #         episodes = [episode for episode in range(num_episodes)]
+    #
+    #         save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
+    #
+    #         plt.figure()
+    #         plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+    #         setup_plot()
+    #         do_plotting(i)
+    #         plt.clf()
 
     else:
         #Average the results over all of the runs for the single paramters setting provided
