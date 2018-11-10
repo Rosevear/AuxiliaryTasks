@@ -220,7 +220,7 @@ if __name__ == "__main__":
     elif args.sweep_neural:
         alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = [0.99]
-        alpha_params = [0.001, 0.005, 0.01]
+        alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
         buffer_size_params = [100, 1000, 10000]
         update_freq_params = [100, 1000, 10000]
 
