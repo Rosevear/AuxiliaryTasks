@@ -21,6 +21,7 @@ from keras.layers import Dense, Activation, Input, concatenate
 from keras.initializers import he_normal, glorot_uniform
 from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
+from keras import backend as k
 
 from rl_glue import RL_num_episodes, RL_num_steps
 
@@ -43,11 +44,11 @@ def agent_init():
     a_globs.model = Sequential()
     init_weights = he_normal()
 
-    a_globs.model.add(Dense(164, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-    a_globs.model.add(Dense(150, activation='relu', kernel_initializer=init_weights))
+    a_globs.model.add(Dense(50, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+    a_globs.model.add(Dense(50, activation='relu', kernel_initializer=init_weights))
     a_globs.model.add(Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights))
 
-    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
+    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA, clipvalue=1))
     summarize_model(a_globs.model, a_globs.AGENT)
 
     #Create the target network
@@ -90,7 +91,16 @@ def agent_step(reward, state):
     #whole vector of q_values, since our network takes state only as input)
     cur_state_formatted = format_states([a_globs.cur_state])
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
+
+
+    # print('q vals')
+    # print(q_vals)
+    # print('state')
+    # print(state)
+    # print('next action')
+    # print(next_action)
     q_vals[0][a_globs.cur_action] = cur_action_target
+
 
     #Update the weights
     # print('single update')
@@ -161,6 +171,14 @@ def agent_step(reward, state):
     if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
         update_target_network()
 
+    #Get the gradients to observe them
+    # outputTensor = a_globs.model.output
+    # listOfVariableTensors = a_globs.model.trainable_weights
+    # gradients = k.gradients(outputTensor, listOfVariableTensors)
+    # print("GRadients!")
+    # print(gradients)
+
+
     a_globs.cur_state = next_state
     a_globs.cur_action = next_action
     return next_action
@@ -168,6 +186,7 @@ def agent_step(reward, state):
 def agent_end(reward):
 
     #Update the network weights
+    print('GOAL')
     cur_state_formatted = format_states([a_globs.cur_state])
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
     q_vals[0][a_globs.cur_action] = reward
