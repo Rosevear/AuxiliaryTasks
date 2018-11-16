@@ -38,6 +38,8 @@ GOAL_STATE_RELATIVE_TOLERANCE = GOAL_STATE_ABSOLUTE_TOLERANCE = 0.01
 #NOTE: Tuple Co-ordinates are in format (y, x), to map to (row, column) state representation in the environment file
 VERTICAL_MOVEMENT_OBSTACLES = []
 HORIZONTAL_MOVEMENT_OBSTACLES = []
+#VERTICAL_MOVEMENT_OBSTACLES = [[(0.625, 0.25), (0.75, 0.25), (0.75, 0.75), (0.625, 0.75)]]
+#HORIZONTAL_MOVEMENT_OBSTACLES = [[(0.25, 0.25), (0.75, 0.25), (0.75, 0.375), (0.25, 0.375)], [(0.25, 0.625), (0.75, 0.625), (0.75, 0.75), (0.25, 0.75)]]
 
 #Variables
 current_state = None
