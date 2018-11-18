@@ -64,7 +64,8 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
     for setting in param_settings:
         cur_agent = setting[0]
 
-        print("Performing a single {} episode long run to compute values for the 3D plot for the {} agent".format(num_episodes, cur_agent))
+        #TODO: Consider adding a loop here to get the values for all agents first, so that we can plot them on the same grid (specifically for t-SNE)
+        print("Performing a single {} episode long run to train the model for visualization for the {} agent".format(num_episodes, cur_agent))
         print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
         send_params(cur_agent, setting)
         RL_init()
@@ -72,32 +73,46 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             print("episode number : {}".format(episode))
             RL_episode(max_steps)
             RL_cleanup()
-        (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
-        # print('x vals')
-        # print(x_values)
-        # print('y vals')
-        # print(y_values)
-        # print('plot values')
-        # print(plot_values)
 
+        #Get the values for the value function
+        # (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+        #
+        # print("Plotting the 3D value function plot")
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.set_title('{} Agent Value Function'.format(cur_agent));
+        # ax.set_xlabel('X position')
+        # ax.set_ylabel('Y position')
+        # ax.set_zlabel('Value')
+        # ax.plot_wireframe(x_values, y_values, plot_values)
+        #
+        # if RESULTS_FILE_NAME:
+        #     print("Saving the results...")
+        #     if suffix:
+        #         plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+        #     else:
+        #         plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        # else:
+        #     print("Displaying the value function results results...")
+        #     plt.show()
 
-        print("Plotting the 3D value function plot")
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_title('{} Agent Value Function'.format(cur_agent));
-        ax.set_xlabel('X position')
-        ax.set_ylabel('Y position')
-        ax.set_zlabel('Value')
-        ax.plot_wireframe(x_values, y_values, plot_values)
+        #Gt the last layer representation for each states_encode_1_hot
+        tsne_results = RL_agent_message(('t-SNE', plot_range))
+
+        print("Plotting the t-SNE results")
+        plt.figure(figsize=(10,10))
+        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        plt.show()
 
         if RESULTS_FILE_NAME:
             print("Saving the results...")
             if suffix:
-                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
             else:
-                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
         else:
-            print("Displaying the results...")
+            print("Displaying the t-SNE results...")
             plt.show()
 
 #Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
@@ -433,5 +448,5 @@ if __name__ == "__main__":
         do_plotting()
 
         if args.values:
-            plot_value_function(1000, max_steps, 50, all_param_settings)
+            plot_value_function(1, max_steps, 50, all_param_settings)
     print("Experiment completed!")

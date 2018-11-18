@@ -44,11 +44,11 @@ def agent_init():
     a_globs.model = Sequential()
     init_weights = he_normal()
 
-    a_globs.model.add(Dense(50, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-    a_globs.model.add(Dense(50, activation='relu', kernel_initializer=init_weights))
+    a_globs.model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+    a_globs.model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu', kernel_initializer=init_weights))
     a_globs.model.add(Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights))
 
-    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA, clipvalue=1))
+    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
     summarize_model(a_globs.model, a_globs.AGENT)
 
     #Create the target network
@@ -93,9 +93,11 @@ def agent_step(reward, state):
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
 
 
+    # print('cur state')
+    # print(a_globs.cur_state)
     # print('q vals')
     # print(q_vals)
-    # print('state')
+    # print('next state')
     # print(state)
     # print('next action')
     # print(next_action)
@@ -146,6 +148,10 @@ def agent_step(reward, state):
 
             #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
             q_vals = a_globs.target_network.predict(sampled_next_state_formatted, batch_size=1)
+            # print('reward of target')
+            # print(reward)
+            # print('state value of target')
+            # print(np.max(q_vals))
             cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals))
 
             #Get the q_vals to adjust the learning target for the current action taken
@@ -214,6 +220,14 @@ def agent_message(in_message):
             return compute_state_action_values_continuous(plot_range)
         else:
             return compute_state_action_values_discrete()
+
+    if in_message[0] == 't-SNE':
+        #Compute the values for use in the 3D plot
+        if a_globs.ENV == CONTINUOUS:
+            plot_range = in_message[1]
+            return compute_t_SNE_continuous(plot_range)
+        else:
+            return compute_t_SNE_discrete()
 
     else:
         params = json.loads(in_message)
