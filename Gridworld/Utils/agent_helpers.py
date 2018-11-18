@@ -31,8 +31,8 @@ from sklearn.manifold import TSNE
 #It has been modified to suit the present purpose. Original author:  Siddhartha Banerjee
 def create_truncated_model(trained_model):
     model = Sequential()
-    model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-    model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu'))
+    model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+    model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu'))
     model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
     for i, layer in enumerate(model.layers):
         layer.set_weights(trained_model.layers[i].get_weights())

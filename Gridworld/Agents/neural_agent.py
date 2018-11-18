@@ -44,8 +44,8 @@ def agent_init():
     a_globs.model = Sequential()
     init_weights = he_normal()
 
-    a_globs.model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-    a_globs.model.add(Dense(a_globs.NUM_NERONS_PER_LAYER, activation='relu', kernel_initializer=init_weights))
+    a_globs.model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+    a_globs.model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights))
     a_globs.model.add(Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights))
 
     a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))

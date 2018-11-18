@@ -4,9 +4,10 @@ LAMBDA = None
 ALPHA = None
 GAMMA = None
 EPSILON_MIN = None
-EPSILON_DECAY_RATE = 0.1
+EPSILON_DECAY_RATE = 0.05
 N = None
-NUM_NERONS_PER_LAYER = 150
+NUM_NERONS_LAYER_1 = 164
+NUM_NERONS_LAYER_2 = 150
 
 
 #For Sarsa agent specifically
@@ -28,11 +29,11 @@ NUM_NOISE_NODES = 10
 NUM_REDUNDANT_TASKS = 5
 
 #Used for sampling in the auxiliary tasks
-BUFFER_SIZE = 1
+BUFFER_SIZE = 10000
 BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 
 #The number of samples to select from the replay buffer on each time step
-BATCH_SIZE = 1
+BATCH_SIZE = 9
 
 #How long to wait before updating the target networks
 NUM_STEPS_TO_UPDATE = 1
