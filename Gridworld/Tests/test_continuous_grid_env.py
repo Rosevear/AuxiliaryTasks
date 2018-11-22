@@ -12,6 +12,14 @@ import Globals.continuous_grid_env_globals as e_globs
 
 class TestContinuousGridEnv(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        #Turn off the noise when testing that the obstaces work
+        #we just want to make sure that walking into the wall keeps us where we are
+        #and noise can make it difficult to pick out starting and expected values for assert statements
+        #tmp = e_globs.ACTION_NOISE_UNIFORM_RANGE
+        e_globs.ACTION_NOISE_UNIFORM_RANGE = 0.0
+
     def setUp(self):
         e_globs.IS_SPARSE = None
 
@@ -111,6 +119,9 @@ class TestContinuousGridEnv(unittest.TestCase):
         e_globs.current_state = [0.26, 0.624]
         env_step(e_globs.EAST)
         self.assertEqual(e_globs.current_state, [0.26, 0.624])
+
+        #e_globs.ACTION_NOISE_UNIFORM_RANGE = tmp
+
 
 
     def test_env_is_in_goal_state(self):

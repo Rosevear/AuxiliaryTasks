@@ -62,7 +62,7 @@ def agent_start(state):
     a_globs.cur_context_actions = []
     a_globs.cur_state = state
 
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         a_globs.cur_action = get_max_action(a_globs.cur_state)
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
@@ -75,7 +75,7 @@ def agent_step(reward, state):
     update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
 
     #Choose the next action, epsilon greedy style
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         #Get the best action over all actions possible in the next state, max_a(Q(s + 1), a))
         q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
         next_action = np.argmax(q_vals)
@@ -113,7 +113,7 @@ def agent_step(reward, state):
     #a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
     #Check and see if the relevant buffer is non-empty
-    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE):
+    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE) and not a_globs.is_trial_episode:
 
         #print('I am replay buffer!')
         #Create the target training batch

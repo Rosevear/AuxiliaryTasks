@@ -166,7 +166,7 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = [a_globs.NEURAL]
+AGENTS = [a_globs.RANDOM, a_globs.SARSA_LAMBDA]
 
 if __name__ == "__main__":
 
@@ -174,6 +174,7 @@ if __name__ == "__main__":
     #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
     #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
     #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
+    parser.add_argument('-trial_frequency', nargs='?', type=int, default=5, help='The number of episoodes after which to run a trial of the polic learned by the Q-Agent. The default is trial_frequency = 10')
     parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
     parser.add_argument('-epi', nargs='?', type=int, default=50, help='The number of episodes per run for each agent. Default value = 50.')
@@ -263,6 +264,7 @@ if __name__ == "__main__":
     else:
         all_params = list(product([a_globs.NEURAL], alpha_params, gamma_params, buffer_size_params, update_freq_params))
     all_results = []
+    all_Q_results = []
     all_param_settings = []
     print("Starting the experiment...")
     i = 0
@@ -295,6 +297,7 @@ if __name__ == "__main__":
             send_params(cur_agent, param_setting)
 
             run_results = []
+            Q_run_results = []
             print("Run number: {}".format(str(run)))
             RL_init()
             for episode in range(num_episodes):
@@ -302,8 +305,19 @@ if __name__ == "__main__":
                 RL_episode(max_steps)
                 run_results.append(RL_num_steps())
                 RL_cleanup()
+
+                #Run a test trial without learning or exploration to test the off-policy learned by the agent
+                if episode % args.trial_frequency and (cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS):
+                    print("Running a trial episode to test the Q-policy at episode: {}".format(episode))
+                    a_globs.is_trial_episode = True
+                    RL_episode(max_steps)
+                    Q_run_results.append(RL_num_steps())
+                    RL_cleanup()
+                    a_globs.is_trial_episode = False
+
             cur_param_results.append(run_results)
         all_results.append(cur_param_results)
+        all_Q_results.append(Q_run_results)
         all_param_settings.append(param_setting)
 
         #Save and plot the results for the current parameter setting
@@ -441,7 +455,8 @@ if __name__ == "__main__":
             if cur_agent in AUX_AGENTS:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
             elif cur_agent == a_globs.SARSA_LAMBDA:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), str(all_param_settings[i][3])))
+                #print(all_param_settings[i])
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), args.t))
             else:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
         setup_plot()
@@ -449,4 +464,6 @@ if __name__ == "__main__":
 
         if args.values:
             plot_value_function(1, max_steps, 50, all_param_settings)
+
+        #if AGE
     print("Experiment completed!")

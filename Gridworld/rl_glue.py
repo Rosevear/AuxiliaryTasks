@@ -137,10 +137,10 @@ def RL_step():
     result : dict
         dictionary with keys {reward,state,action,isTerminal}
     """
-    global last_action, total_reward, num_steps, num_episodes
+    global last_action, total_reward, num_steps, num_episodes, is_timeout
     result = environment.env_step(last_action)
     total_reward += result['reward'];
-    if result['isTerminal'] == True:
+    if result['isTerminal'] == True and is_timeout == False:
         num_episodes += 1
         agent.agent_end(result['reward'])
         result['action'] = None
@@ -211,7 +211,9 @@ def RL_episode(max_steps_this_episode):
     -------
     is_terminal : bool
     """
+    global is_timeout
     is_terminal = False
+    is_timeout = False
 
     RL_start()
     while (not is_terminal) and ((max_steps_this_episode == 0) or (num_steps < max_steps_this_episode)):
@@ -220,6 +222,7 @@ def RL_episode(max_steps_this_episode):
 
         if (num_steps == (max_steps_this_episode)):
             print 'not ended'
+            is_timeout = True
 
     return is_terminal
 

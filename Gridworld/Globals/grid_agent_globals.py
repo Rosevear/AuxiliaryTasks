@@ -9,7 +9,6 @@ N = None
 NUM_NERONS_LAYER_1 = 164
 NUM_NERONS_LAYER_2 = 150
 
-
 #For Sarsa agent specifically
 TRACE = 0.90
 NUM_TILINGS = 8
@@ -61,6 +60,7 @@ cur_epsilon = None
 cur_state = None
 cur_action = None
 cur_context = None
+is_trial_episode = False
 
 #The buffer that holds all of the sub buffers (which are used to do biased sampling)
 buffer_container = None
