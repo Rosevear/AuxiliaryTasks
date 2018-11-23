@@ -80,9 +80,9 @@ def agent_init():
     #Specify the model
     init_weights = he_normal()
     main_input = Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
-    shared_1 = Dense(NUM_NERONS_LAYER_1, activation='relu', kernel_initializer=init_weights, name='shared_1')(main_input)
-    main_task_full_layer = Dense(NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights, name='main_task_full_layer')(shared_1)
-    aux_task_full_layer = Dense(NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights)(shared_1)
+    shared_1 = Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', kernel_initializer=init_weights, name='shared_1')(main_input)
+    main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights, name='main_task_full_layer')(shared_1)
+    aux_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights)(shared_1)
 
     main_output = Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights, name='main_output')(main_task_full_layer)
     aux_output = Dense(num_outputs, activation=cur_activation, kernel_initializer=init_weights, name='aux_output')(aux_task_full_layer)
@@ -105,7 +105,7 @@ def agent_start(state):
     a_globs.cur_context_actions = []
     a_globs.cur_state = state
 
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         q_vals = get_q_vals_aux(a_globs.cur_state, False)
         a_globs.cur_action = np.argmax(q_vals[0])
     else:
@@ -121,7 +121,7 @@ def agent_step(reward, state):
     next_state_formatted = format_states([next_state])
 
     #Choose the next action, epsilon greedy style
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
         q_vals = get_q_vals_aux(next_state, False)
         next_action = np.argmax(q_vals)

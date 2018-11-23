@@ -85,9 +85,9 @@ def compute_t_SNE_discrete():
     # print(state_network_representations)
     tsne = TSNE(n_components=2, verbose=1)
     tsne_results = tsne.fit_transform(state_network_representations)
-    print(tsne_results)
+    #print(tsne_results)
     # print(tsne_results.shape)
-    print(tsne_results[:, 0])
+    #print(tsne_results[:, 0])
 
     return tsne_results
 
@@ -335,7 +335,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
     cur_state_formatted = format_states([cur_state])
 
     #Check and see if the relevant buffer is non-empty
-    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE):
+    if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE) and not a_globs.is_trial_episode:
 
         #print('I am replay buffer!')
         #Create the target training batch
@@ -528,8 +528,8 @@ def buffers_are_ready(buffer_container, buffer_size):
     for sub_buffer in buffer_container:
         #print('I am ')
         #print(sub_buffer)
-        # if not sub_buffer:
-        #     return False
+        if not sub_buffer:
+            return False
         cur_buffer_size += len(sub_buffer)
     return cur_buffer_size == buffer_size
 

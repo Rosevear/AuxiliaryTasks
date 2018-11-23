@@ -313,7 +313,7 @@ if __name__ == "__main__":
                 RL_cleanup()
 
                 #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                if episode % args.trial_frequency and (is_neural(cur_agent)):
+                if episode >= args.trial_frequency and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
                     print("Running a trial episode to test the Q-policy at episode: {} for agent: {}".format(episode, cur_agent))
                     a_globs.is_trial_episode = True
                     RL_episode(max_steps)
@@ -466,25 +466,7 @@ if __name__ == "__main__":
         setup_plot()
         do_plotting()
 
-        avg_results = []
-        for i in range(len(all_results)):
-            avg_results.append([np.mean(run) for run in zip(*all_results[i])])
-            cur_data = [episode for episode in range(num_episodes)]
-            cur_agent = str(all_param_settings[i][0])
-
-            save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME)
-
-            if cur_agent in AUX_AGENTS:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
-            elif cur_agent == a_globs.SARSA_LAMBDA:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), args.t))
-            else:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
-        setup_plot()
-        do_plotting()
-
         if args.values:
             plot_value_function(1000, max_steps, 50, all_param_settings)
 
-        #if AGE
     print("Experiment completed!")
