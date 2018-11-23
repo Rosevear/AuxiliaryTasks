@@ -36,6 +36,10 @@ else:
 import matplotlib.pyplot as plt
 
 ###### HELPER FUNCTIONS START ##############
+
+def is_neural(cur_agent):
+    return cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS
+
 def setup_plot():
     print("Plotting the results...")
     plt.ylabel('Steps per episode')
@@ -75,35 +79,36 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             RL_cleanup()
 
         #Get the values for the value function
-        # (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
-        #
-        # print("Plotting the 3D value function plot")
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.set_title('{} Agent Value Function'.format(cur_agent));
-        # ax.set_xlabel('X position')
-        # ax.set_ylabel('Y position')
-        # ax.set_zlabel('Value')
-        # ax.plot_wireframe(x_values, y_values, plot_values)
-        #
-        # if RESULTS_FILE_NAME:
-        #     print("Saving the results...")
-        #     if suffix:
-        #         plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-        #     else:
-        #         plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-        # else:
-        #     print("Displaying the value function results results...")
-        #     plt.show()
+        (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
 
-        #Gt the last layer representation for each states_encode_1_hot
-        tsne_results = RL_agent_message(('t-SNE', plot_range))
+        print("Plotting the 3D value function plot")
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_title('{} Agent Value Function'.format(cur_agent));
+        ax.set_xlabel('X position')
+        ax.set_ylabel('Y position')
+        ax.set_zlabel('Value')
+        ax.plot_wireframe(x_values, y_values, plot_values)
 
-        print("Plotting the t-SNE results")
-        plt.figure(figsize=(10,10))
-        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        plt.show()
+        if RESULTS_FILE_NAME:
+            print("Saving the results...")
+            if suffix:
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            else:
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        else:
+            print("Displaying the value function results results...")
+            plt.show()
+
+        #Gt the last layer representation for each state
+        if is_neural(cur_agent):
+            tsne_results = RL_agent_message(('t-SNE', plot_range))
+
+            print("Plotting the t-SNE results")
+            plt.figure(figsize=(10,10))
+            plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+            plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+            plt.show()
 
         if RESULTS_FILE_NAME:
             print("Saving the results...")
@@ -164,9 +169,9 @@ def send_params(cur_agent, param_setting):
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 #TODO: If worth it, consider making trace a sweepable parameter.
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
-AUX_AGENTS = []
+AUX_AGENTS = ['reward']
 #AGENTS = []
-AGENTS = [a_globs.RANDOM, a_globs.SARSA_LAMBDA]
+AGENTS = []
 
 if __name__ == "__main__":
 
@@ -266,6 +271,7 @@ if __name__ == "__main__":
     all_results = []
     all_Q_results = []
     all_param_settings = []
+    all_Q_param_settings = []
     print("Starting the experiment...")
     i = 0
     for param_setting in all_params:
@@ -307,8 +313,8 @@ if __name__ == "__main__":
                 RL_cleanup()
 
                 #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                if episode % args.trial_frequency and (cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS):
-                    print("Running a trial episode to test the Q-policy at episode: {}".format(episode))
+                if episode % args.trial_frequency and (is_neural(cur_agent)):
+                    print("Running a trial episode to test the Q-policy at episode: {} for agent: {}".format(episode, cur_agent))
                     a_globs.is_trial_episode = True
                     RL_episode(max_steps)
                     Q_run_results.append(RL_num_steps())
@@ -319,25 +325,26 @@ if __name__ == "__main__":
         all_results.append(cur_param_results)
         all_Q_results.append(Q_run_results)
         all_param_settings.append(param_setting)
+        all_Q_param_settings.append(param_setting)
 
         #Save and plot the results for the current parameter setting
-        if args.sweep_neural:
-            cur_agent = all_param_settings[i][0]
-            if cur_agent != a_globs.NEURAL:
-                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
-            cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            episodes = [episode for episode in range(num_episodes)]
-
-            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
-
-            plt.figure()
-            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-            setup_plot()
-            do_plotting(i)
-            plt.clf()
+        # if args.sweep_neural:
+        #     cur_agent = all_param_settings[i][0]
+        #     if cur_agent != a_globs.NEURAL:
+        #         exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+        #     cur_data = [np.mean(run) for run in zip(*all_results[i])]
+        #     episodes = [episode for episode in range(num_episodes)]
+        #
+        #     save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
+        #
+        #     plt.figure()
+        #     plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+        #     setup_plot()
+        #     do_plotting(i)
+        #     plt.clf()
         i += 1
 
-    #Process and plot the results
+    #Process and plot the results of a generic non-neural network specific sweep
     if args.sweep:
         #Average the results for each parameter setting over all of the runs and find the best parameter setting for each agent
         all_params_no_agent = list(product(alpha_params, gamma_params)) + list(product(alpha_params, gamma_params, replay_context_sizes, lambda_params))
@@ -424,29 +431,27 @@ if __name__ == "__main__":
             do_plotting(file_name_suffix)
             file_name_suffix += 1
 
-    # elif args.sweep_neural:
-    #     for i in range(len(all_results)):
-    #         cur_agent = all_param_settings[i][0]
-    #         if cur_agent != a_globs.NEURAL:
-    #             exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
-    #         cur_data = [np.mean(run) for run in zip(*all_results[i])]
-    #         episodes = [episode for episode in range(num_episodes)]
-    #
-    #         save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
-    #
-    #         plt.figure()
-    #         plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-    #         setup_plot()
-    #         do_plotting(i)
-    #         plt.clf()
+    elif args.sweep_neural:
+        for i in range(len(all_results)):
+            cur_agent = all_param_settings[i][0]
+            if cur_agent != a_globs.NEURAL:
+                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+            cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            episodes = [episode for episode in range(num_episodes)]
+
+            save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
+
+            plt.figure()
+            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+            setup_plot()
+            do_plotting(i)
+            plt.clf()
 
     else:
         #Average the results over all of the runs for the single paramters setting provided
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
-
-        for i in range(len(avg_results)):
             cur_data = [episode for episode in range(num_episodes)]
             cur_agent = str(all_param_settings[i][0])
 
@@ -455,7 +460,23 @@ if __name__ == "__main__":
             if cur_agent in AUX_AGENTS:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
             elif cur_agent == a_globs.SARSA_LAMBDA:
-                #print(all_param_settings[i])
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), args.t))
+            else:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
+        setup_plot()
+        do_plotting()
+
+        avg_results = []
+        for i in range(len(all_results)):
+            avg_results.append([np.mean(run) for run in zip(*all_results[i])])
+            cur_data = [episode for episode in range(num_episodes)]
+            cur_agent = str(all_param_settings[i][0])
+
+            save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME)
+
+            if cur_agent in AUX_AGENTS:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), all_param_settings[i][3], str(all_param_settings[i][4])))
+            elif cur_agent == a_globs.SARSA_LAMBDA:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} Trace = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2]), args.t))
             else:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
@@ -463,7 +484,7 @@ if __name__ == "__main__":
         do_plotting()
 
         if args.values:
-            plot_value_function(1, max_steps, 50, all_param_settings)
+            plot_value_function(1000, max_steps, 50, all_param_settings)
 
         #if AGE
     print("Experiment completed!")
