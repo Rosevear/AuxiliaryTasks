@@ -161,13 +161,27 @@ def agent_message(in_message):
         else:
             return compute_state_action_values_discrete()
 
-    if in_message[0] == 't-SNE':
+    elif in_message[0] == 't-SNE':
         #Compute the values for use in the 3D plot
         if a_globs.ENV == CONTINUOUS:
             plot_range = in_message[1]
             return compute_t_SNE_continuous(plot_range)
         else:
             return compute_t_SNE_discrete()
+
+    elif in_message[0] == 'CCA':
+        if a_globs.ENV == CONTINUOUS:
+            plot_range = in_message[1]
+            model_snapshots = in_message[2]
+            return compute_CCA_continuous(plot_range, model_snapshots)
+        else:
+            model_snapshots = in_message[2]
+            return compute_CCA_discrete(model_snapshots)
+
+    elif in_message[0] == 'GET_SNAPSHOT':
+        cur_snapshot = clone_model(a_globs.model)
+        cur_snapshot.set_weights(cur_snapshot.get_weights())
+        return cur_snapshot
 
     else:
         params = json.loads(in_message)

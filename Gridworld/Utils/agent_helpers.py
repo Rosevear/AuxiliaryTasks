@@ -13,7 +13,6 @@ from utils import rand_in_range, rand_un
 from random import randint
 
 import numpy as np
-import pickle
 import random
 import json
 import platform
@@ -26,6 +25,7 @@ from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 
 from sklearn.manifold import TSNE
+from Utils.cca_core import *
 
 #This function has been taken from https://becominghuman.ai/visualizing-representations-bd9b62447e38 on November 17th, 2018
 #It has been modified to suit the present purpose. Original author:  Siddhartha Banerjee
@@ -46,6 +46,68 @@ def create_truncated_model(trained_model):
     for i, layer in enumerate(model.layers):
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
+
+def compute_CCA_discrete(model_snapshots):
+    "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across all states"
+
+    cca_results = []
+    max_x_val = e_globs.MAX_COLUMN + 1
+    max_y_val = e_globs.MAX_ROW + 1
+    truncated_trained_model = create_truncated_model(a_globs.model)
+    hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
+    #print(hidden_layer_feature_shape)
+    for model in model_snapshots:
+        cur_truncated_model = create_truncated_model(model)
+        cur_layer_representations = np.empty((hidden_layer_feature_shape[1], max_x_val * max_y_val))
+        trained_layer_representations = np.empty((hidden_layer_feature_shape[1], max_x_val * max_y_val))
+
+        #Compute the last hidden layer state representation for each state
+        i = 0
+        for x in range(max_x_val):
+            for y in range(max_y_val):
+                #State formatters expect a list of states in [row, column] format
+                cur_state = [y, x]
+                cur_state_formatted = format_states([cur_state])
+                cur_layer_features = cur_truncated_model.predict(cur_state_formatted)
+                trained_layer_features = truncated_trained_model.predict(cur_state_formatted)
+                cur_layer_representations[:, i] = cur_layer_features
+                trained_layer_representations[:, i] = trained_layer_features
+                i += 1
+
+        #print(cur_layer_representations.shape)
+        cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
+        return cca_results
+
+def compute_CCA_continuous(plot_range, model_snapshots):
+    "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across a number of evenly sampled states equal to plot_range^2"
+
+    cca_results = []
+    truncated_trained_model = create_truncated_model(a_globs.model)
+    hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
+    #print(hidden_layer_feature_shape)
+    for model in model_snapshots:
+        cur_truncated_model = create_truncated_model(model)
+        cur_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
+        trained_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
+
+        #Compute the last hidden layer state representation for each state
+        i = 0
+        for x in range(plot_range):
+            scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
+            for y in range(plot_range):
+                scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
+                #State formatters expect a list of states in [row, column] format
+                cur_state = [y, x]
+                cur_state_formatted = format_states([cur_state])
+                cur_layer_features = cur_truncated_model.predict(cur_state_formatted)
+                trained_layer_features = truncated_trained_model.predict(cur_state_formatted)
+                cur_layer_representations[:, i] = cur_layer_features
+                trained_layer_representations[:, i] = trained_layer_features
+                i += 1
+
+        #print(cur_layer_representations.shape)
+        cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
+        return cca_results
 
 def compute_t_SNE_discrete():
     "Computes the representations learned in the last hidden layer of the neural network for all states"
@@ -97,7 +159,7 @@ def compute_t_SNE_discrete():
     return tsne_results
 
 def compute_t_SNE_continuous(plot_range):
-    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
+    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range^2"
 
     #Get a truncated modle so that we can grab the predictions of the hidden layer
     truncated_model = create_truncated_model(a_globs.model)
@@ -191,7 +253,7 @@ def compute_state_action_values_discrete():
     return x_values, np.transpose(y_values), np.transpose(plot_values)
 
 def compute_state_action_values_continuous(plot_range):
-    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
+    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range^2"
 
     x_values = np.empty((1, plot_range))
     y_values = np.empty((1, plot_range))

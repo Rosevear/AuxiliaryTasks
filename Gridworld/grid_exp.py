@@ -40,10 +40,11 @@ import matplotlib.pyplot as plt
 def is_neural(cur_agent):
     return cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS
 
-def setup_plot(x_tick_size=None):
+def setup_plot(x_tick_size=None, plot_title=None):
     print("Plotting the results...")
     plt.ylabel('Steps per episode')
     plt.xlabel("Episode")
+    plt.title(plot_title)
 
     if x_tick_size:
         plt.xticks(np.arange(0, num_episodes + 1, x_tick_size))
@@ -62,7 +63,7 @@ def do_plotting(suffix=0, filename=None):
         print("Displaying the results...")
         plt.show()
 
-def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suffix=0):
+def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix=0):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
     np.random.seed(2)
@@ -79,8 +80,13 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
         RL_init()
         for episode in range(num_episodes):
             print("episode number : {}".format(episode))
+
+            if (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
+                 MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
+
             RL_episode(max_steps)
             RL_cleanup()
+        MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
 
         #Get the values for the value function
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
@@ -104,7 +110,7 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             print("Displaying the value function results results...")
             plt.show()
 
-        #Gt the last layer representation for each state
+        #Get the last layer representation for each state and visualize using t-SNE
         if is_neural(cur_agent):
             tsne_results = RL_agent_message(('t-SNE', plot_range))
 
@@ -114,15 +120,35 @@ def plot_value_function(num_episodes, max_steps, plot_range, param_settings, suf
             plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
             plt.show()
 
-        if RESULTS_FILE_NAME:
-            print("Saving the results...")
-            if suffix:
-                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            if RESULTS_FILE_NAME:
+                print("Saving the results...")
+                if suffix:
+                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+                else:
+                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
             else:
-                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-        else:
-            print("Displaying the t-SNE results...")
-            plt.show()
+                print("Displaying the t-SNE results...")
+                plt.show()
+
+            cca_results = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
+            #print(cca_results)
+
+            #TODO: Plot the CCA results appropriately
+            # print("Plotting the CCA results")
+            # plt.figure(figsize=(10,10))
+            # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+            # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+            # plt.show()
+            #
+            # if RESULTS_FILE_NAME:
+            #     print("Saving the results...")
+            #     if suffix:
+            #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            #     else:
+            #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+            # else:
+            #     print("Displaying the CCA results...")
+            #     plt.show()
 
 #Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
@@ -176,6 +202,8 @@ def send_params(cur_agent, param_setting):
 AUX_AGENTS = ['reward']
 #AGENTS = []
 AGENTS = []
+CCA_SNAPSHOT_POINTS = [0.0, 0.25, 0.50, 0.75, 1.00] #The percentage of training time for the snapshots of the neural network being visualized with CCA
+MODEL_SNAPSHOTS = []
 
 if __name__ == "__main__":
 
@@ -203,7 +231,7 @@ if __name__ == "__main__":
     parser.add_argument('--sweep', action='store_true', help='Specify whether the program should ignore the input parameters provided and do a parameter sweep over all of its possible parameters and compare the best parameter setting per agent as well as all agent\'s at each parameter setting. See grid_exp.py to set the parameters that are swept over')
     parser.add_argument('--sweep_neural', action='store_true', help='Sweep the parameters of the single task neural network and display the results on a single plot. Parameters swept: alpha, buffer_size, target_network update size.')
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
-    parser.add_argument('--values', action='store_true', help='Whether to plot the value function plot for each agent. Default = false')
+    parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
 
     args = parser.parse_args()
 
@@ -475,12 +503,12 @@ if __name__ == "__main__":
                 #cur_data = [1100, 1500, 2000]
                 #print(all_Q_param_settings)
                 plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
-                setup_plot(args.trial_frequency)
+                setup_plot(args.trial_frequency, 'Q_results')
                 do_plotting(i, RESULTS_FILE_NAME + "Q_results")
                 plt.clf()
 
     else:
-        #Average the results over all of the runs for the single paramters setting provided
+        #Average the results over all of the runs for the single parameters setting provided
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
@@ -511,10 +539,10 @@ if __name__ == "__main__":
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2]), all_Q_param_settings[i][3], str(all_Q_param_settings[i][4])))
             else:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2])))
-        setup_plot()
+        setup_plot(args.trial_frequency, 'Q_results')
         do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
-        if args.values:
-            plot_value_function(1, max_steps, 50, all_param_settings)
+        if args.visualize:
+            do_visualization(10, max_steps, 50, all_param_settings)
 
     print("Experiment completed!")

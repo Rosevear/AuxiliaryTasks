@@ -94,7 +94,7 @@ def agent_cleanup():
     print('Cur epsilon at episode end: {}'.format(a_globs.cur_epsilon))
     return
 
-def agent_message(in_message): # returns string, in_message: string
+def agent_message(in_message):
     "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
 
     if in_message[0] == 'PLOT':
@@ -104,6 +104,9 @@ def agent_message(in_message): # returns string, in_message: string
             return compute_state_action_values_continuous(plot_range)
         else:
             return compute_state_action_values_discrete()
+
+    elif in_message[0] == 'GET_SNAPSHOT':
+        pass
 
     else:
         params = json.loads(in_message)
@@ -120,8 +123,3 @@ def agent_message(in_message): # returns string, in_message: string
             a_globs.IS_DISCRETE = True
         else:
             a_globs.IS_DISCRETE = False
-
-        #These parameters are for auxiliary tasks only, and always occur together
-        if 'N' in params and 'LAMBDA' in params:
-            a_globs.N = params['N']
-            a_globs.LAMBDA = params['LAMBDA']
