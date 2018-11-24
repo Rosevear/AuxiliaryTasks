@@ -30,14 +30,22 @@ from sklearn.manifold import TSNE
 #This function has been taken from https://becominghuman.ai/visualizing-representations-bd9b62447e38 on November 17th, 2018
 #It has been modified to suit the present purpose. Original author:  Siddhartha Banerjee
 def create_truncated_model(trained_model):
-    model = Sequential()
-    model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-    model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu'))
+    "Return a model equivalent to trained model in terms of architecture and weights, but without the last layer"
+
+    if a_globs.AGENT == a_globs.NEURAL:
+        model = Sequential()
+        model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+        model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu'))
+    else:
+        main_input = Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
+        shared_1 = Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', name='shared_1')(main_input)
+        main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', name='main_task_full_layer')(shared_1)
+        model = Model(inputs=main_input, outputs=main_task_full_layer)
+
     model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
     for i, layer in enumerate(model.layers):
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
-
 
 def compute_t_SNE_discrete():
     "Computes the representations learned in the last hidden layer of the neural network for all states"
@@ -47,9 +55,6 @@ def compute_t_SNE_discrete():
 
     max_x_val = e_globs.MAX_COLUMN + 1
     max_y_val = e_globs.MAX_ROW + 1
-
-    # x_values = np.empty((1, max_x_val))
-    # y_values = np.empty((1, max_y_val))
 
     hidden_layer_feature_shape = truncated_model.predict(format_states([[0, 0]])).shape
     #print(hidden_layer_feature_shape)
@@ -91,52 +96,51 @@ def compute_t_SNE_discrete():
 
     return tsne_results
 
+def compute_t_SNE_continuous(plot_range):
+    "Compute the values for the current value function across a number of evenly sampled states equal to plot_range"
 
-def compute_state_action_values_discrete():
-    "Compute the values for the current value function across all of the states"
+    #Get a truncated modle so that we can grab the predictions of the hidden layer
+    truncated_model = create_truncated_model(a_globs.model)
+    hidden_layer_feature_shape = truncated_model.predict(format_states([[0, 0]])).shape
+    state_network_representations = np.empty((plot_range ** 2, hidden_layer_feature_shape[1]))
 
-    max_x_val = e_globs.MAX_COLUMN + 1
-    max_y_val = e_globs.MAX_ROW + 1
-
-    x_values = np.empty((1, max_x_val))
-    y_values = np.empty((1, max_y_val))
-
-    plot_values = np.empty((max_x_val, max_y_val))
-    # print(a_globs.AGENT)
-    # print('plot shape')
-    # print(plot_values.shape)
-    for x in range(max_x_val):
-        for y in range(max_y_val):
+    #Compute the last hidden layer state representation for each state
+    i = 0
+    for x in range(plot_range):
+        scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
+        for y in range(plot_range):
             #State formatters expect a list of states in [row, column] format
-            cur_state = [y, x]
-            if a_globs.AGENT == a_globs.RANDOM:
-                pass
-            if a_globs.AGENT == a_globs.TABULAR:
-                #State action table is int[row, column] format
-                best_action_val = -max([a_globs.state_action_values[y][x][action] for action in range(a_globs.NUM_ACTIONS)])
-            elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
-                best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
-            else:
-                cur_state_formatted = format_states([cur_state])
-                #print(best_action_val)
-                best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
-
+            scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
+            cur_state = [scaled_y, scaled_x]
+            cur_state_formatted = format_states([cur_state])
+            hidden_layer_features = truncated_model.predict(cur_state_formatted)
+            state_network_representations[i] = hidden_layer_features
+            i += 1
             #x_values.append(x)
             #print('y value shape')
             #print(y_values.shape)
             #y_values.append(y)
-            y_values[0][y] = y
+            #y_values[0][y] = y
             # print(best_action_val)
             # print(plot_values)
-            plot_values[x][y] = best_action_val
             # print('x_values')
             # print(x_values)
             # print('y_values')
             # print(y_values)
             # print('plot_values')
             # print(plot_values)
-        x_values[0][x] = x
-    return x_values, np.transpose(y_values), np.transpose(plot_values)
+        #x_values[0][x] = x
+
+    #Perform dimensionality reduction
+    # print(state_network_representations.shape)
+    # print(state_network_representations)
+    tsne = TSNE(n_components=2, verbose=1)
+    tsne_results = tsne.fit_transform(state_network_representations)
+    #print(tsne_results)
+    # print(tsne_results.shape)
+    #print(tsne_results[:, 0])
+
+    return tsne_results
 
 def compute_state_action_values_discrete():
     "Compute the values for the current value function across all of the states"
@@ -164,8 +168,10 @@ def compute_state_action_values_discrete():
                 best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
-                #print(best_action_val)
-                best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
+                if a_globs.AGENT == a_globs.NEURAL:
+                    best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
+                else:
+                    best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1)[0][0])
 
             #x_values.append(x)
             #print('y value shape')
@@ -210,7 +216,10 @@ def compute_state_action_values_continuous(plot_range):
                 best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
-                best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))
+                if a_globs.AGENT == a_globs.NEURAL:
+                    best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
+                else:
+                    best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1)[0][0])
 
             #x_values.append(x)
             #print('y value shape')

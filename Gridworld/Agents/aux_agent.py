@@ -161,6 +161,14 @@ def agent_message(in_message):
         else:
             return compute_state_action_values_discrete()
 
+    if in_message[0] == 't-SNE':
+        #Compute the values for use in the 3D plot
+        if a_globs.ENV == CONTINUOUS:
+            plot_range = in_message[1]
+            return compute_t_SNE_continuous(plot_range)
+        else:
+            return compute_t_SNE_discrete()
+
     else:
         params = json.loads(in_message)
         a_globs.EPSILON_MIN = params["EPSILON"]
@@ -175,6 +183,12 @@ def agent_message(in_message):
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_ROWS * e_globs.NUM_COLUMNS
         else:
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES
+
+        if 'BUFFER_SIZE' in params.keys():
+            a_globs.BUFFER_SIZE = params['BUFFER_SIZE']
+
+        if 'NUM_STEPS_TO_UPDATE' in params.keys():
+            a_globs.NUM_STEPS_TO_UPDATE = params['NUM_STEPS_TO_UPDATE']
 
         #These parameters are for auxiliary tasks only, and always occur together
         if 'N' in params and 'LAMBDA' in params:

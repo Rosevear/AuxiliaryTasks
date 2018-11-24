@@ -40,20 +40,24 @@ import matplotlib.pyplot as plt
 def is_neural(cur_agent):
     return cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS
 
-def setup_plot():
+def setup_plot(x_tick_size=None):
     print("Plotting the results...")
     plt.ylabel('Steps per episode')
     plt.xlabel("Episode")
+
+    if x_tick_size:
+        plt.xticks(np.arange(0, num_episodes + 1, x_tick_size))
+
     plt.axis([0, num_episodes, 0, max_steps + 1000])
     plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
 
-def do_plotting(suffix=0):
-    if RESULTS_FILE_NAME:
+def do_plotting(suffix=0, filename=None):
+    if filename:
         print("Saving the results...")
         if suffix:
-            plt.savefig("{}.png".format(RESULTS_FILE_NAME + str(suffix)), format="png")
+            plt.savefig("{}.png".format(filename + str(suffix)), format="png")
         else:
-            plt.savefig("{}.png".format(RESULTS_FILE_NAME), format="png")
+            plt.savefig("{}.png".format(filename), format="png")
     else:
         print("Displaying the results...")
         plt.show()
@@ -190,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument('-g', nargs='?', type=float, default=0.99, help='Discount factor, which determines how far ahead from the current state the agent takes into consideraton when updating its values. Default = 0.95')
     parser.add_argument('-n', nargs='?', type=int, default=1, help='The number of states to use in the auxiliary prediction tasks. This is currently disabled, and will default to n = 1')
     parser.add_argument('-env', choices={GRID, CONTINUOUS, WINDY}, type=str, default=GRID, help='Which environment to train the agent on. Options are: {}, {}, {}. Default is env = "grid"'. format(GRID, CONTINUOUS, WINDY))
-    parser.add_argument('-name', nargs='?', type=str, help='The name of the file to save the experiment results to. File format is png.')
+    parser.add_argument('-name', nargs='?', default='default_name', type=str, help='The name of the file to save the experiment results to. File format is png.')
     parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4')
     parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment')
     parser.add_argument('--continuous', action='store_true', help='Specify whether to use the continuous gridworld environment')
@@ -239,11 +243,14 @@ if __name__ == "__main__":
         print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
 
     elif args.sweep_neural:
-        alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
+        #alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = [0.99]
-        alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
-        buffer_size_params = [100, 1000, 10000]
-        update_freq_params = [1, 100, 1000, 10000]
+        #alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
+        #buffer_size_params = [100, 1000, 10000]
+        update_freq_params = [1000]
+
+        alpha_params = [0.001]
+        buffer_size_params = [10000]
 
     else:
         alpha_params = [args.a]
@@ -268,10 +275,12 @@ if __name__ == "__main__":
         all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
     else:
         all_params = list(product([a_globs.NEURAL], alpha_params, gamma_params, buffer_size_params, update_freq_params))
+
     all_results = []
-    all_Q_results = []
     all_param_settings = []
+    all_Q_results = []
     all_Q_param_settings = []
+
     print("Starting the experiment...")
     i = 0
     for param_setting in all_params:
@@ -294,6 +303,7 @@ if __name__ == "__main__":
             exit('ERROR: Invalid agent string {} provided!'.format(cur_agent))
 
         cur_param_results = []
+        cur_Q_param_results = []
         for run in range(num_runs):
             #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
             np.random.seed(run)
@@ -306,15 +316,15 @@ if __name__ == "__main__":
             Q_run_results = []
             print("Run number: {}".format(str(run)))
             RL_init()
-            for episode in range(num_episodes):
+            for episode in range(num_episodes + 1):
                 print("Episode number: {}".format(str(episode)))
                 RL_episode(max_steps)
                 run_results.append(RL_num_steps())
                 RL_cleanup()
 
                 #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                if episode >= args.trial_frequency and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
-                    print("Running a trial episode to test the Q-policy at episode: {} for agent: {}".format(episode, cur_agent))
+                if episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
+                    print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
                     a_globs.is_trial_episode = True
                     RL_episode(max_steps)
                     Q_run_results.append(RL_num_steps())
@@ -322,9 +332,10 @@ if __name__ == "__main__":
                     a_globs.is_trial_episode = False
 
             cur_param_results.append(run_results)
+            cur_Q_param_results.append(Q_run_results)
         all_results.append(cur_param_results)
-        all_Q_results.append(Q_run_results)
         all_param_settings.append(param_setting)
+        all_Q_results.append(cur_Q_param_results)
         all_Q_param_settings.append(param_setting)
 
         #Save and plot the results for the current parameter setting
@@ -388,7 +399,7 @@ if __name__ == "__main__":
                 plt.plot(episodes, best_agent_results[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(best_agent_results[agent].params[0], str(best_agent_results[agent].params[1]), str(best_agent_results[agent].params[2])))
             i += 1
         setup_plot()
-        do_plotting()
+        do_plotting(filename=RESULTS_FILE_NAME)
 
         #print('param setting results pre merge')
         #print(param_setting_results)
@@ -428,31 +439,52 @@ if __name__ == "__main__":
                     plt.plot(episodes, cur_param_setting_result[agent].data, GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(agent, str(cur_param_setting_result[agent].params[1]), str(cur_param_setting_result[agent].params[2])))
                 i += 1
             setup_plot()
-            do_plotting(file_name_suffix)
+            do_plotting(file_name_suffix, RESULTS_FILE_NAME)
             file_name_suffix += 1
 
     elif args.sweep_neural:
         for i in range(len(all_results)):
             cur_agent = all_param_settings[i][0]
-            if cur_agent != a_globs.NEURAL:
-                exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+            if not is_neural(cur_agent):
+                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+            #print(all_results)
             cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            episodes = [episode for episode in range(num_episodes)]
+            episodes = [episode for episode in range(num_episodes + 1)]
 
             save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
 
             plt.figure()
             plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
             setup_plot()
-            do_plotting(i)
+            do_plotting(i, RESULTS_FILE_NAME)
             plt.clf()
+
+            #Plot the results for the optimal Q-value policy
+            for i in range(len(all_Q_results)):
+                cur_agent = all_Q_param_settings[i][0]
+                if not is_neural(cur_agent):
+                    exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+                cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
+                episodes = [episode for episode in range(0, num_episodes + args.trial_frequency, args.trial_frequency)]
+
+                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results")
+
+                plt.figure()
+                #print(episodes)
+                #print(cur_data)
+                #cur_data = [1100, 1500, 2000]
+                #print(all_Q_param_settings)
+                plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
+                setup_plot(args.trial_frequency)
+                do_plotting(i, RESULTS_FILE_NAME + "Q_results")
+                plt.clf()
 
     else:
         #Average the results over all of the runs for the single paramters setting provided
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
-            cur_data = [episode for episode in range(num_episodes)]
+            cur_data = [episode for episode in range(num_episodes + 1)]
             cur_agent = str(all_param_settings[i][0])
 
             save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME)
@@ -464,9 +496,25 @@ if __name__ == "__main__":
             else:
                 plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][2])))
         setup_plot()
-        do_plotting()
+        do_plotting(filename=RESULTS_FILE_NAME)
+        plt.clf()
+
+        avg_results = []
+        for i in range(len(all_Q_results)):
+            avg_results.append([np.mean(run) for run in zip(*all_Q_results[i])])
+            cur_data = [episode for episode in range(0, num_episodes + args.trial_frequency, args.trial_frequency)]
+            cur_agent = str(all_param_settings[i][0])
+
+            save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
+
+            if cur_agent in AUX_AGENTS:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2]), all_Q_param_settings[i][3], str(all_Q_param_settings[i][4])))
+            else:
+                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2])))
+        setup_plot()
+        do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.values:
-            plot_value_function(1000, max_steps, 50, all_param_settings)
+            plot_value_function(1, max_steps, 50, all_param_settings)
 
     print("Experiment completed!")

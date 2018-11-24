@@ -249,9 +249,4 @@ def agent_message(in_message):
 
         if 'NUM_STEPS_TO_UPDATE' in params.keys():
             a_globs.NUM_STEPS_TO_UPDATE = params['NUM_STEPS_TO_UPDATE']
-
-        #These parameters are for auxiliary tasks only, and always occur together
-        if 'N' in params and 'LAMBDA' in params:
-            a_globs.N = params['N']
-            a_globs.LAMBDA = params['LAMBDA']
     return
