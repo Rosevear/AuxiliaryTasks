@@ -76,6 +76,14 @@ def compute_CCA_discrete(model_snapshots):
 
         #print(cur_layer_representations.shape)
         cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
+        x = cca_results[0]
+        print('Neuron coefficients')
+        print(x['neuron_coeffs1'])
+        #print(x['neuron_coeffs2'])
+        print('cca coefficients')
+        print(x['cca_coef1'])
+        print('cca directions')
+        print(x['cca_dirns1'])
         return cca_results
 
 def compute_CCA_continuous(plot_range, model_snapshots):
@@ -107,6 +115,7 @@ def compute_CCA_continuous(plot_range, model_snapshots):
 
         #print(cur_layer_representations.shape)
         cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
+        #print(cca_results[0])
         return cca_results
 
 def compute_t_SNE_discrete():

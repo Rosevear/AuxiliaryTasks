@@ -199,9 +199,9 @@ def send_params(cur_agent, param_setting):
 #TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
 #TODO: If worth it, consider making trace a sweepable parameter.
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
-AUX_AGENTS = ['reward']
+AUX_AGENTS = []
 #AGENTS = []
-AGENTS = []
+AGENTS = ['neural']
 CCA_SNAPSHOT_POINTS = [0.0, 0.25, 0.50, 0.75, 1.00] #The percentage of training time for the snapshots of the neural network being visualized with CCA
 MODEL_SNAPSHOTS = []
 
@@ -232,6 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_neural', action='store_true', help='Sweep the parameters of the single task neural network and display the results on a single plot. Parameters swept: alpha, buffer_size, target_network update size.')
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
     parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
+    parser.add_argument('--q_plot', action='store_true', help='Whether to plot the performance of the q policy periodically. Default = false')
 
     args = parser.parse_args()
 
@@ -273,12 +274,12 @@ if __name__ == "__main__":
     elif args.sweep_neural:
         #alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = [0.99]
-        #alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
-        #buffer_size_params = [100, 1000, 10000]
+        alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
+        buffer_size_params = [100, 1000, 10000]
         update_freq_params = [1000]
 
-        alpha_params = [0.001]
-        buffer_size_params = [10000]
+        #alpha_params = [0.001, 0.005]
+        #buffer_size_params = [10000]
 
     else:
         alpha_params = [args.a]
@@ -351,7 +352,7 @@ if __name__ == "__main__":
                 RL_cleanup()
 
                 #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                if episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
+                if args.q_plot and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
                     print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
                     a_globs.is_trial_episode = True
                     RL_episode(max_steps)
@@ -543,6 +544,6 @@ if __name__ == "__main__":
         do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
-            do_visualization(10, max_steps, 50, all_param_settings)
+            do_visualization(10, max_steps, 5, all_param_settings)
 
     print("Experiment completed!")
