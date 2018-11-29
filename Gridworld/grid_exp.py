@@ -274,7 +274,7 @@ if __name__ == "__main__":
     elif args.sweep_neural:
         #alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = [0.99]
-        alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.25]
+        alpha_params = [0.001, 0.005, 0.0075, 0.01, 0.05, 0.1, 0.15, 0.25]
         buffer_size_params = [100, 1000, 10000]
         update_freq_params = [1000]
 
@@ -345,7 +345,7 @@ if __name__ == "__main__":
             Q_run_results = []
             print("Run number: {}".format(str(run)))
             RL_init()
-            for episode in range(num_episodes + 1):
+            for episode in range(num_episodes):
                 print("Episode number: {}".format(str(episode)))
                 RL_episode(max_steps)
                 run_results.append(RL_num_steps())
@@ -382,7 +382,45 @@ if __name__ == "__main__":
         #     setup_plot()
         #     do_plotting(i)
         #     plt.clf()
-        i += 1
+
+        if args.sweep_neural:
+            cur_agent = all_param_settings[i][0]
+            if not is_neural(cur_agent):
+                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+            #print(all_results)
+            cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            episodes = [episode for episode in range(num_episodes)]
+
+            print(episodes)
+            print(cur_data)
+
+            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
+
+            plt.figure()
+            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+            setup_plot(plot_title='On Policy Results')
+            do_plotting(i, RESULTS_FILE_NAME)
+            plt.clf()
+
+            #Plot the results for the optimal Q-value policy
+            cur_agent = all_Q_param_settings[i][0]
+            if not is_neural(cur_agent):
+                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+            cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
+            episodes = [episode for episode in range(0, num_episodes, args.trial_frequency)]
+
+            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i))
+
+            plt.figure()
+            print(episodes)
+            print(cur_data)
+            #cur_data = [1100, 1500, 2000]
+            #print(all_Q_param_settings)
+            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
+            setup_plot(args.trial_frequency, 'Off Policy Results')
+            do_plotting(i, RESULTS_FILE_NAME + "Q_results")
+            plt.clf()
+            i += 1
 
     #Process and plot the results of a generic non-neural network specific sweep
     if args.sweep:
@@ -472,48 +510,14 @@ if __name__ == "__main__":
             file_name_suffix += 1
 
     elif args.sweep_neural:
-        for i in range(len(all_results)):
-            cur_agent = all_param_settings[i][0]
-            if not is_neural(cur_agent):
-                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
-            #print(all_results)
-            cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            episodes = [episode for episode in range(num_episodes + 1)]
-
-            save_results(cur_data, cur_agent, RESULTS_FILE_NAME)
-
-            plt.figure()
-            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-            setup_plot()
-            do_plotting(i, RESULTS_FILE_NAME)
-            plt.clf()
-
-            #Plot the results for the optimal Q-value policy
-            for i in range(len(all_Q_results)):
-                cur_agent = all_Q_param_settings[i][0]
-                if not is_neural(cur_agent):
-                    exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
-                cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
-                episodes = [episode for episode in range(0, num_episodes + args.trial_frequency, args.trial_frequency)]
-
-                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results")
-
-                plt.figure()
-                #print(episodes)
-                #print(cur_data)
-                #cur_data = [1100, 1500, 2000]
-                #print(all_Q_param_settings)
-                plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
-                setup_plot(args.trial_frequency, 'Q_results')
-                do_plotting(i, RESULTS_FILE_NAME + "Q_results")
-                plt.clf()
+        pass
 
     else:
         #Average the results over all of the runs for the single parameters setting provided
         avg_results = []
         for i in range(len(all_results)):
             avg_results.append([np.mean(run) for run in zip(*all_results[i])])
-            cur_data = [episode for episode in range(num_episodes + 1)]
+            cur_data = [episode for episode in range(num_episodes)]
             cur_agent = str(all_param_settings[i][0])
 
             save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME)
@@ -531,7 +535,7 @@ if __name__ == "__main__":
         avg_results = []
         for i in range(len(all_Q_results)):
             avg_results.append([np.mean(run) for run in zip(*all_Q_results[i])])
-            cur_data = [episode for episode in range(0, num_episodes + args.trial_frequency, args.trial_frequency)]
+            cur_data = [episode for episode in range(0, num_episodes, args.trial_frequency)]
             cur_agent = str(all_param_settings[i][0])
 
             save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
