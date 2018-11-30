@@ -178,6 +178,13 @@ def save_results(results, cur_agent, filename='Default File Name'):
         results_file.write('{} agent summary statistics\n'.format(cur_agent))
         results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(results), np.std(results)))
 
+def write_to_log(contents, filename=LOG_FILE_NAME):
+    "Write the contents to file filename."
+
+    with open(filename, 'a+') as log_file:
+        log_file.write(contents)
+        log_file.write('\n')
+
 def send_params(cur_agent, param_setting):
     "Send the specified agent and environment parameters to be used in the current run"
 
@@ -281,6 +288,8 @@ if __name__ == "__main__":
         #alpha_params = [0.001, 0.005]
         #buffer_size_params = [10000]
 
+        sweeped_pairs = [(0.001, 100), (0.001, 1000)]
+
     else:
         alpha_params = [args.a]
         gamma_params = [args.g]
@@ -313,114 +322,122 @@ if __name__ == "__main__":
     print("Starting the experiment...")
     i = 0
     for param_setting in all_params:
-        cur_agent = param_setting[0]
+        if not (param_setting[1], param_setting[3]) in sweeped_pairs:
+            cur_agent = param_setting[0]
 
-        #Load the appropriate agent and environment files
-        if cur_agent == a_globs.SARSA_LAMBDA:
-            print("Training agent: {} with alpha = {} gamma = {} trace = {}".format(param_setting[0], param_setting[1], param_setting[2], trace_params[0]))
-            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
-        elif cur_agent == a_globs.NEURAL and args.sweep_neural:
-            print("Training agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
-            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
-        elif cur_agent in AGENTS:
-            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
-            print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
-        elif cur_agent in AUX_AGENTS:
-            print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
-            RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.aux_agent".format(AGENT_DIR))
-        else:
-            exit('ERROR: Invalid agent string {} provided!'.format(cur_agent))
+            #Load the appropriate agent and environment files
+            if cur_agent == a_globs.SARSA_LAMBDA:
+                print("Training agent: {} with alpha = {} gamma = {} trace = {}".format(param_setting[0], param_setting[1], param_setting[2], trace_params[0]))
+                RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+            elif cur_agent == a_globs.NEURAL and args.sweep_neural:
+                log_contents = "Training agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4])
+                print(log_contents)
+                write_to_log(log_contents)
+                RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+            elif cur_agent in AGENTS:
+                RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.{}_agent".format(AGENT_DIR, cur_agent))
+                print("Training agent: {} with alpha = {} gamma = {}".format(param_setting[0], param_setting[1], param_setting[2]))
+            elif cur_agent in AUX_AGENTS:
+                print("Training agent: {} with alpha = {} gamma = {}, context size = {}, and lambda = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4]))
+                RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.aux_agent".format(AGENT_DIR))
+            else:
+                exit('ERROR: Invalid agent string {} provided!'.format(cur_agent))
 
-        cur_param_results = []
-        cur_Q_param_results = []
-        for run in range(num_runs):
-            #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
-            np.random.seed(run)
-            random.seed(run)
+            cur_param_results = []
+            cur_Q_param_results = []
+            for run in range(num_runs):
+                #Set random seeds to ensure replicability of results and the same trajectory of experience across agents for valid comparison
+                np.random.seed(run)
+                random.seed(run)
 
-            #Send the agent and environment parameters to use for the current run
-            send_params(cur_agent, param_setting)
+                #Send the agent and environment parameters to use for the current run
+                send_params(cur_agent, param_setting)
 
-            run_results = []
-            Q_run_results = []
-            print("Run number: {}".format(str(run)))
-            RL_init()
-            for episode in range(num_episodes):
-                print("Episode number: {}".format(str(episode)))
-                RL_episode(max_steps)
-                run_results.append(RL_num_steps())
-                RL_cleanup()
-
-                #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                if args.q_plot and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
-                    print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
-                    a_globs.is_trial_episode = True
+                run_results = []
+                Q_run_results = []
+                print("Run number: {}".format(str(run)))
+                RL_init()
+                for episode in range(num_episodes):
+                    print("Episode number: {}".format(str(episode)))
                     RL_episode(max_steps)
-                    Q_run_results.append(RL_num_steps())
+                    run_results.append(RL_num_steps())
                     RL_cleanup()
-                    a_globs.is_trial_episode = False
 
-            cur_param_results.append(run_results)
-            cur_Q_param_results.append(Q_run_results)
-        all_results.append(cur_param_results)
-        all_param_settings.append(param_setting)
-        all_Q_results.append(cur_Q_param_results)
-        all_Q_param_settings.append(param_setting)
+                    #Run a test trial without learning or exploration to test the off-policy learned by the agent
+                    if args.q_plot and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
+                        print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
+                        a_globs.is_trial_episode = True
+                        RL_episode(max_steps)
+                        Q_run_results.append(RL_num_steps())
+                        RL_cleanup()
+                        a_globs.is_trial_episode = False
 
-        #Save and plot the results for the current parameter setting
-        # if args.sweep_neural:
-        #     cur_agent = all_param_settings[i][0]
-        #     if cur_agent != a_globs.NEURAL:
-        #         exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
-        #     cur_data = [np.mean(run) for run in zip(*all_results[i])]
-        #     episodes = [episode for episode in range(num_episodes)]
-        #
-        #     save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
-        #
-        #     plt.figure()
-        #     plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-        #     setup_plot()
-        #     do_plotting(i)
-        #     plt.clf()
+                cur_param_results.append(run_results)
+                cur_Q_param_results.append(Q_run_results)
+            all_results.append(cur_param_results)
+            all_param_settings.append(param_setting)
+            all_Q_results.append(cur_Q_param_results)
+            all_Q_param_settings.append(param_setting)
 
-        if args.sweep_neural:
-            cur_agent = all_param_settings[i][0]
-            if not is_neural(cur_agent):
-                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
-            #print(all_results)
-            cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            episodes = [episode for episode in range(num_episodes)]
+            #Save and plot the results for the current parameter setting
+            # if args.sweep_neural:
+            #     cur_agent = all_param_settings[i][0]
+            #     if cur_agent != a_globs.NEURAL:
+            #         exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
+            #     cur_data = [np.mean(run) for run in zip(*all_results[i])]
+            #     episodes = [episode for episode in range(num_episodes)]
+            #
+            #     save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
+            #
+            #     plt.figure()
+            #     plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+            #     setup_plot()
+            #     do_plotting(i)
+            #     plt.clf()
 
-            print(episodes)
-            print(cur_data)
+            if args.sweep_neural:
+                cur_agent = all_param_settings[i][0]
+                if not is_neural(cur_agent):
+                    exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+                #print(all_results)
+                cur_data = [np.mean(run) for run in zip(*all_results[i])]
+                episodes = [episode for episode in range(num_episodes)]
 
-            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
+                #print(episodes)
+                #print(cur_data)
 
-            plt.figure()
-            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-            setup_plot(plot_title='On Policy Results')
-            do_plotting(i, RESULTS_FILE_NAME)
-            plt.clf()
+                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
 
-            #Plot the results for the optimal Q-value policy
-            cur_agent = all_Q_param_settings[i][0]
-            if not is_neural(cur_agent):
-                exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
-            cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
-            episodes = [episode for episode in range(0, num_episodes, args.trial_frequency)]
+                plt.figure()
+                plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
+                setup_plot(plot_title='On Policy Results')
+                do_plotting(i, RESULTS_FILE_NAME)
+                plt.clf()
 
-            save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i))
+                #Plot the results for the optimal Q-value policy
+                cur_agent = all_Q_param_settings[i][0]
+                if not is_neural(cur_agent):
+                    exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
+                cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
+                episodes = [episode for episode in range(0, num_episodes, args.trial_frequency)]
 
-            plt.figure()
-            print(episodes)
-            print(cur_data)
-            #cur_data = [1100, 1500, 2000]
-            #print(all_Q_param_settings)
-            plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
-            setup_plot(args.trial_frequency, 'Off Policy Results')
-            do_plotting(i, RESULTS_FILE_NAME + "Q_results")
-            plt.clf()
-            i += 1
+                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i))
+
+                plt.figure()
+                #print(episodes)
+                #print(cur_data)
+                #cur_data = [1100, 1500, 2000]
+                #print(all_Q_param_settings)
+                plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
+                setup_plot(args.trial_frequency, 'Off Policy Results')
+                do_plotting(i, RESULTS_FILE_NAME + "Q_results")
+                plt.clf()
+                i += 1
+
+            else:
+                log_contents = "Skipping agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4])
+                print(log_contents)
+                write_to_log(log_contents)
 
     #Process and plot the results of a generic non-neural network specific sweep
     if args.sweep:
