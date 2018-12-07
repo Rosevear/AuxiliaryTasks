@@ -322,7 +322,7 @@ if __name__ == "__main__":
     print("Starting the experiment...")
     i = 0
     for param_setting in all_params:
-        if not (param_setting[1], param_setting[3]) in sweeped_pairs:
+        if not args.sweep_neural or not (param_setting[1], param_setting[3]) in sweeped_pairs:
             cur_agent = param_setting[0]
 
             #Load the appropriate agent and environment files
@@ -379,22 +379,6 @@ if __name__ == "__main__":
             all_Q_results.append(cur_Q_param_results)
             all_Q_param_settings.append(param_setting)
 
-            #Save and plot the results for the current parameter setting
-            # if args.sweep_neural:
-            #     cur_agent = all_param_settings[i][0]
-            #     if cur_agent != a_globs.NEURAL:
-            #         exit('ERROR: The current agent is not the single task neural network, but you are attempting to sweep such a network! Please ensure that the agent set up in grid_exp.py is a neural network')
-            #     cur_data = [np.mean(run) for run in zip(*all_results[i])]
-            #     episodes = [episode for episode in range(num_episodes)]
-            #
-            #     save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
-            #
-            #     plt.figure()
-            #     plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_param_settings[i][1]), str(all_param_settings[i][3]), str(all_param_settings[i][4])))
-            #     setup_plot()
-            #     do_plotting(i)
-            #     plt.clf()
-
             if args.sweep_neural:
                 cur_agent = all_param_settings[i][0]
                 if not is_neural(cur_agent):
@@ -433,11 +417,10 @@ if __name__ == "__main__":
                 do_plotting(i, RESULTS_FILE_NAME + "Q_results")
                 plt.clf()
                 i += 1
-
-            else:
-                log_contents = "Skipping agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4])
-                print(log_contents)
-                write_to_log(log_contents)
+        else:
+            log_contents = "Skipping agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4])
+            print(log_contents)
+            write_to_log(log_contents)
 
     #Process and plot the results of a generic non-neural network specific sweep
     if args.sweep:
@@ -526,10 +509,7 @@ if __name__ == "__main__":
             do_plotting(file_name_suffix, RESULTS_FILE_NAME)
             file_name_suffix += 1
 
-    elif args.sweep_neural:
-        pass
-
-    else:
+    elif not args.sweep_neural:
         #Average the results over all of the runs for the single parameters setting provided
         avg_results = []
         for i in range(len(all_results)):

@@ -35,7 +35,7 @@ BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 BATCH_SIZE = 9
 
 #How long to wait before updating the target networks
-NUM_STEPS_TO_UPDATE = 1
+NUM_STEPS_TO_UPDATE = 1000
 
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'

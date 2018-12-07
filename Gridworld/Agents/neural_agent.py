@@ -64,6 +64,9 @@ def agent_start(state):
 
     if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         a_globs.cur_action = get_max_action(a_globs.cur_state)
+        if a_globs.is_trial_episode:
+            print('Q step!')
+            pass
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
     return a_globs.cur_action
@@ -79,6 +82,9 @@ def agent_step(reward, state):
         #Get the best action over all actions possible in the next state, max_a(Q(s + 1), a))
         q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
         next_action = np.argmax(q_vals)
+        if a_globs.is_trial_episode:
+            print('Q step!')
+            pass
     else:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
@@ -206,7 +212,8 @@ def agent_cleanup():
     "Perform miscellaneous state management at the end of the current run"
 
     #Decay epsilon at the end of the episode
-    a_globs.cur_epsilon = max(a_globs.EPSILON_MIN, a_globs.cur_epsilon - a_globs.EPSILON_DECAY_RATE)
+    if not a_globs.is_trial_episode:
+        a_globs.cur_epsilon = max(a_globs.EPSILON_MIN, a_globs.cur_epsilon - a_globs.EPSILON_DECAY_RATE)
     print('Cur epsilon at episode end: {}'.format(a_globs.cur_epsilon))
     return
 
