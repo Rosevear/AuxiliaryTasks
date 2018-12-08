@@ -529,20 +529,26 @@ if __name__ == "__main__":
         do_plotting(filename=RESULTS_FILE_NAME)
         plt.clf()
 
-        avg_results = []
-        for i in range(len(all_Q_results)):
-            avg_results.append([np.mean(run) for run in zip(*all_Q_results[i])])
-            cur_data = [episode for episode in range(0, num_episodes, args.trial_frequency)]
-            cur_agent = str(all_param_settings[i][0])
+        if args.q_plot:
+            avg_results = []
+            for i in range(len(all_Q_results)):
+                avg_results.append([np.mean(run) for run in zip(*all_Q_results[i])])
+                cur_data = [episode for episode in range(0, num_episodes, args.trial_frequency)]
+                cur_agent = str(all_param_settings[i][0])
 
-            save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
+                save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
 
-            if cur_agent in AUX_AGENTS:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2]), all_Q_param_settings[i][3], str(all_Q_param_settings[i][4])))
-            else:
-                plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2])))
-        setup_plot(args.trial_frequency, 'Q_results')
-        do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
+                # print('cur data')
+                # print(cur_data)
+                # print('results')
+                # print(avg_results[i])
+
+                if cur_agent in AUX_AGENTS:
+                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2]), all_Q_param_settings[i][3], str(all_Q_param_settings[i][4])))
+                else:
+                    plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2])))
+            setup_plot(args.trial_frequency, 'Q_results')
+            do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
             do_visualization(10, max_steps, 5, all_param_settings)
