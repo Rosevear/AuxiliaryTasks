@@ -48,7 +48,7 @@ def agent_init():
     a_globs.model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights))
     a_globs.model.add(Dense(a_globs.NUM_ACTIONS, activation='linear', kernel_initializer=init_weights))
 
-    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA, clipvalue=1))
+    a_globs.model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
     summarize_model(a_globs.model, a_globs.AGENT)
 
     #Create the target network
