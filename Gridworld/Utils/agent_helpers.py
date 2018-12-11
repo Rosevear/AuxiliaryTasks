@@ -11,6 +11,7 @@ from Utils.tiles3 import IHT, tiles
 from collections import namedtuple
 from utils import rand_in_range, rand_un
 from random import randint
+from math import hypot
 
 import numpy as np
 import random
@@ -687,19 +688,31 @@ def states_actions_encode_1_hot(states, actions):
 
 def coordinate_states_encoding(states):
     """
-    Format the x, y coordinates as a numpy array
+    Format the row, column coordinates as a numpy array
     """
 
-    #flatten the states list
-    #[item for sublist in l for item in sublist]
-    states = [coordinate for state in states for coordinate in state]
-    formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
+    if a_globs.ENV == CONTINUOUS:
+        goal_state = cont_e_globs.GOAL_STATE
+    else:
+        goal_state = e_globs.GOAL_STATE
 
+    #flatten the states list
+    states = [coordinate for state in states for coordinate in state]
+    # print('states')
+    # print(states)
+    # print('x diff')
+    # print(abs(goal_state[0] - states[0]))
+    # print('y diff')
+    # print(abs(goal_state[1] - states[1]))
+    distance_to_goal = hypot(abs(goal_state[0] - states[0]), abs(goal_state[1] - states[1]))
+    states.append(distance_to_goal)
+    formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
+    #print(formatted_states)
     return formatted_states
 
 def coordinate_states_actions_encoding(states, actions):
     """
-    Formt the x,y coordinate and action as a numpy array
+    Formt the row, column coordinate and action as a numpy array
     """
 
     #flatten the states list
