@@ -281,14 +281,14 @@ if __name__ == "__main__":
     elif args.sweep_neural:
         #alpha_params = sample_params_log_uniform(0.001, 0.1, 6)
         gamma_params = [0.99]
-        alpha_params = [0.001, 0.005, 0.0075, 0.01, 0.05, 0.1, 0.15, 0.25]
-        buffer_size_params = [100, 1000, 10000]
+        alpha_params = [0.001, 0.005, 0.01, 0.05, 0.1]
+        buffer_size_params = [10000, 1000]
         update_freq_params = [1000]
 
         #alpha_params = [0.001, 0.005]
         #buffer_size_params = [10000]
 
-        sweeped_pairs = [(0.001, 100), (0.001, 1000)]
+        sweeped_pairs = []
 
     else:
         alpha_params = [args.a]
