@@ -262,7 +262,7 @@ def agent_message(in_message):
         if a_globs.IS_1_HOT:
             a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_ROWS * e_globs.NUM_COLUMNS
         else:
-            a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES + 1
+            a_globs.FEATURE_VECTOR_SIZE = e_globs.NUM_STATE_COORDINATES
 
         if 'BUFFER_SIZE' in params.keys():
             a_globs.BUFFER_SIZE = params['BUFFER_SIZE']
