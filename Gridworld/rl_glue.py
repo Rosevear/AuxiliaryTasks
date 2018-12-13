@@ -211,7 +211,7 @@ def RL_episode(max_steps_this_episode):
     -------
     is_terminal : bool
     """
-    global is_timeout
+    global is_timeout, num_episodes
     is_terminal = False
     is_timeout = False
 
@@ -223,6 +223,7 @@ def RL_episode(max_steps_this_episode):
         if (num_steps == (max_steps_this_episode)):
             print 'not ended'
             is_timeout = True
+            num_episodes += 1
 
     return is_terminal
 

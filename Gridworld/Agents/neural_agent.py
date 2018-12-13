@@ -18,7 +18,7 @@ import copy
 
 from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
-from keras.initializers import he_normal, glorot_uniform
+from keras.initializers import he_normal, glorot_uniform, he_uniform, glorot_uniform
 from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 from keras import backend as k
@@ -42,7 +42,7 @@ def agent_init():
 
     #Initialize the neural network
     a_globs.model = Sequential()
-    init_weights = he_normal()
+    init_weights = glorot_uniform()
 
     a_globs.model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', kernel_initializer=init_weights, input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
     a_globs.model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', kernel_initializer=init_weights))
@@ -61,18 +61,22 @@ def agent_start(state):
     a_globs.cur_context = []
     a_globs.cur_context_actions = []
     a_globs.cur_state = state
+    #print('STARTE STATE')
+    #print(state)
 
     if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         a_globs.cur_action = get_max_action(a_globs.cur_state)
-        if a_globs.is_trial_episode:
-            print('Q step!')
-            pass
+        #if a_globs.is_trial_episode:
+        #    print('Q step!')
+        #    pass
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
     return a_globs.cur_action
 
 def agent_step(reward, state):
 
+    #print('CUR STATE')
+    #print(state)
     next_state = state
     next_state_formatted = format_states([next_state])
     update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
@@ -82,9 +86,9 @@ def agent_step(reward, state):
         #Get the best action over all actions possible in the next state, max_a(Q(s + 1), a))
         q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
         next_action = np.argmax(q_vals)
-        if a_globs.is_trial_episode:
-            print('Q step!')
-            pass
+        #if a_globs.is_trial_episode:
+        #    print('Q step!')
+        #    pass
     else:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
@@ -120,8 +124,10 @@ def agent_step(reward, state):
 
     #Check and see if the relevant buffer is non-empty
     if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE) and not a_globs.is_trial_episode:
-
         #print('I am replay buffer!')
+        buffer_states = [observation.states for observation in a_globs.buffer_container[0]]
+        #print(buffer_states)
+
         #Create the target training batch
         batch_inputs = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.FEATURE_VECTOR_SIZE,))
         batch_targets = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.NUM_ACTIONS))
@@ -133,6 +139,8 @@ def agent_step(reward, state):
         #Use the replay buffer to learn from previously visited states
         for i in range(1, a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
+
+            # print('cur transition')
             # print('states')
             # print(cur_observation.states)
             # print('actions')
@@ -181,7 +189,41 @@ def agent_step(reward, state):
         a_globs.model.fit(batch_inputs, batch_targets, batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
     if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0:
+        # print("Updating the target network at time step {} on episode {}".format(str(RL_num_steps()), str(RL_num_episodes())))
+        #print("Weights before update")
+        #print(a_globs.target_network.get_weights())
+        layers = a_globs.target_network.layers
+        # print('target network layersl: list of keras layers')
+        # print(layers)
+        # print('first layer weights: list of numpy arrays')
+        # print(layers[0].get_weights())
+        # print('layer weights 1: numpy array')
+        # print(layers[0].get_weights()[0])
+        # print('layer 1 weights shape')
+        # print(layers[0].get_weights()[0].shape)
+        # print('layer 1 neron 1 weights')
+        # print(layers[0].get_weights()[0][0])
+        # print('layer weights 2: numpy array')
+        # print(layers[0].get_weights()[1])
+
+
+        old_target_layer_1_weights = layers[0].get_weights()[1]
         update_target_network()
+        new_target_layer_1_weights = layers[0].get_weights()[1]
+
+        # if any(old_target_layer_1_weights != new_target_layer_1_weights):
+        #     print('Target weights changed at episode {}'.format(RL_num_episodes()))
+        # else:
+        #     print('No change to the target weights at episode {}'.format(str(RL_num_episodes())))
+
+        # print('Weights after update')
+        # print(a_globs.target_network.get_weights())
+    else:
+        pass
+        #print('No target update at step {} of episode {}'.format(str(RL_num_steps()), str(RL_num_episodes())))
+        #print('current w')
+        #print(a_globs.target_network.get_weights())
+
 
     #Get the gradients to observe them
     # outputTensor = a_globs.model.output

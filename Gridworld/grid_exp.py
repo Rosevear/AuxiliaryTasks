@@ -81,12 +81,13 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
         for episode in range(num_episodes):
             print("episode number : {}".format(episode))
 
-            if (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
+            if is_neural(cur_agent) and (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
                  MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
 
             RL_episode(max_steps)
             RL_cleanup()
-        MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
+        if is_neural(cur_agent):
+            MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
 
         #Get the values for the value function
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
@@ -551,6 +552,6 @@ if __name__ == "__main__":
             do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
-            do_visualization(10, max_steps, 5, all_param_settings)
+            do_visualization(1000, max_steps, 1000, all_param_settings)
 
     print("Experiment completed!")
