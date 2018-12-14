@@ -232,7 +232,6 @@ def agent_step(reward, state):
     # print("GRadients!")
     # print(gradients)
 
-
     a_globs.cur_state = next_state
     a_globs.cur_action = next_action
     return next_action

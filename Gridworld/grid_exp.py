@@ -21,12 +21,14 @@ import json
 import random
 import numpy as np
 import platform
+import os
 
 from time import sleep
 from itertools import product
 from collections import namedtuple
 from math import log
 from mpl_toolkits.mplot3d import Axes3D
+from keras.models import model_from_json
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -36,6 +38,44 @@ else:
 import matplotlib.pyplot as plt
 
 ###### HELPER FUNCTIONS START ##############
+
+#NOTE:  Save and load model taken from https://machinelearningmastery.com/save-load-keras-deep-learning-models/, by Jason Brownlee, on December 13th 2018, and modified to suit the current purpose
+def save_model(model, filename):
+    "Save the current model architecture to disk in a in a json format and the weights in HDF5 format."
+
+    # serialize model to JSON
+    try:
+        model_json = model.to_json()
+        with open(MODELS + filename + '.json', "w") as json_file:
+            json_file.write(model_json)
+
+        print("Succesfully saved the model architecture")
+
+        # serialize weights to HDF5
+        model.save_weights(MODELS + filename + ".h5")
+        print("Sucessfully saved them odel weights")
+    except IOError as cur_exception:
+         print("ERROR: Could not save the model: {}".format(os.strerror(cur_exception.errno)))
+
+def load_model(filename):
+    "Load the currently saved model architecture and weights from disk"
+
+    # load weights into new model
+    try:
+        print(MODELS + filename + '.json')
+        json_file = open(MODELS + filename + '.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        loaded_model = model_from_json(loaded_model_json)
+        print("Succesfully loaded the model architecture")
+
+        # load weights into new model
+        loaded_model.load_weights(MODELS + filename + ".h5")
+        print("Successfully loaded the model weights")
+
+        return loaded_model
+    except IOError as cur_exception:
+         print("ERROR: Could not load the model: {}".format(os.strerror(cur_exception.errno)))
 
 def is_neural(cur_agent):
     return cur_agent == a_globs.NEURAL or cur_agent in AUX_AGENTS
@@ -66,92 +106,101 @@ def do_plotting(suffix=0, filename=None):
 def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix=0):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
-    np.random.seed(2)
-    random.seed(2)
-    # print('param settings')
-    # print(param_settings)
-    for setting in param_settings:
-        cur_agent = setting[0]
+    if args.load_model:
+        a_globs.model = load_model(args.load_model)
+        cur_agent = a_globs.NEURAL
 
-        #TODO: Consider adding a loop here to get the values for all agents first, so that we can plot them on the same grid (specifically for t-SNE)
-        print("Performing a single {} episode long run to train the model for visualization for the {} agent".format(num_episodes, cur_agent))
-        print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
-        send_params(cur_agent, setting)
-        RL_init()
-        for episode in range(num_episodes):
-            print("episode number : {}".format(episode))
+    else:
+        np.random.seed(2)
+        random.seed(2)
+        # print('param settings')
+        # print(param_settings)
+        for setting in param_settings:
+            cur_agent = setting[0]
 
-            if is_neural(cur_agent) and (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
-                 MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
+            #TODO: Consider adding a loop here to get the values for all agents first, so that we can plot them on the same grid (specifically for t-SNE)
+            print("Performing a single {} episode long run to train the model for visualization for the {} agent".format(num_episodes, cur_agent))
+            print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
+            send_params(cur_agent, setting)
+            RL_init()
+            for episode in range(num_episodes):
+                print("episode number : {}".format(episode))
 
-            RL_episode(max_steps)
-            RL_cleanup()
-        if is_neural(cur_agent):
-            MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
+                if is_neural(cur_agent) and (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
+                     MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
 
-        #Get the values for the value function
-        (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+                RL_episode(max_steps)
+                RL_cleanup()
 
-        print("Plotting the 3D value function plot")
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_title('{} Agent Value Function'.format(cur_agent));
-        ax.set_xlabel('X position')
-        ax.set_ylabel('Y position')
-        ax.set_zlabel('Value')
-        ax.plot_wireframe(x_values, y_values, plot_values)
+            if is_neural(cur_agent):
+                MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
+
+            if args.save_model:
+                save_model(a_globs.model, RESULTS_FILE_NAME + str(setting))
+
+    #Get the values for the value function
+    (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+
+    print("Plotting the 3D value function plot")
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_title('{} Agent Value Function'.format(cur_agent));
+    ax.set_xlabel('X position')
+    ax.set_ylabel('Y position')
+    ax.set_zlabel('Value')
+    ax.plot_wireframe(x_values, y_values, plot_values)
+
+    if RESULTS_FILE_NAME:
+        print("Saving the results...")
+        if suffix:
+            plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+        else:
+            plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+    else:
+        print("Displaying the value function results results...")
+        plt.show()
+
+    #Get the last layer representation for each state and visualize using t-SNE
+    if is_neural(cur_agent):
+        tsne_results = RL_agent_message(('t-SNE', plot_range))
+
+        print("Plotting the t-SNE results")
+        plt.figure(figsize=(10,10))
+        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        plt.show()
 
         if RESULTS_FILE_NAME:
             print("Saving the results...")
             if suffix:
-                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
             else:
-                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
         else:
-            print("Displaying the value function results results...")
+            print("Displaying the t-SNE results...")
             plt.show()
 
-        #Get the last layer representation for each state and visualize using t-SNE
-        if is_neural(cur_agent):
-            tsne_results = RL_agent_message(('t-SNE', plot_range))
+        cca_results = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
+        #print(cca_results)
 
-            print("Plotting the t-SNE results")
-            plt.figure(figsize=(10,10))
-            plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-            plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-            plt.show()
+        #TODO: Plot the CCA results appropriately
+        # print("Plotting the CCA results")
+        # plt.figure(figsize=(10,10))
+        # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        # plt.show()
+        #
+        # if RESULTS_FILE_NAME:
+        #     print("Saving the results...")
+        #     if suffix:
+        #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+        #     else:
+        #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        # else:
+        #     print("Displaying the CCA results...")
+        #     plt.show()
 
-            if RESULTS_FILE_NAME:
-                print("Saving the results...")
-                if suffix:
-                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-                else:
-                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-            else:
-                print("Displaying the t-SNE results...")
-                plt.show()
-
-            cca_results = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
-            #print(cca_results)
-
-            #TODO: Plot the CCA results appropriately
-            # print("Plotting the CCA results")
-            # plt.figure(figsize=(10,10))
-            # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-            # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-            # plt.show()
-            #
-            # if RESULTS_FILE_NAME:
-            #     print("Saving the results...")
-            #     if suffix:
-            #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-            #     else:
-            #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-            # else:
-            #     print("Displaying the CCA results...")
-            #     plt.show()
-
-#Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
+#NOTE: Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
     z.update(y)    # modifies z with y's keys and values & returns None
@@ -202,10 +251,6 @@ def send_params(cur_agent, param_setting):
 
 ###### HELPER FUNCTIONS END #################
 
-#TODO: Make agents selectable as either a single agent or a list of agents.
-#TODO: Make it so that user can specify the arguments to sweep
-#TODO: Consider creating a named tuple for each possible param combination, so that wen refer to params by name rather than having to keep the order in mind when accessing them
-#TODO: If worth it, consider making trace a sweepable parameter.
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
@@ -219,6 +264,7 @@ if __name__ == "__main__":
     #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
     #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
     #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
+    parser.add_argument('-load_model', nargs='?', type=str, help='The file name of a pre-trained model to load. The corresponding json and HDF5 files, named the same as the value provided here for input, must be present in the Models directory. This applies only to neural network based agents.')
     parser.add_argument('-trial_frequency', nargs='?', type=int, default=5, help='The number of episoodes after which to run a trial of the polic learned by the Q-Agent. The default is trial_frequency = 10')
     parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
@@ -241,6 +287,7 @@ if __name__ == "__main__":
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
     parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
     parser.add_argument('--q_plot', action='store_true', help='Whether to plot the performance of the q policy periodically. Default = false')
+    parser.add_argument('--save_model', action='store_true', help='Whether to save the models trained for the current run of the program. If no filename is provided via the filename paramter, the default filename will be used. Default = false.')
 
     args = parser.parse_args()
 
@@ -552,6 +599,6 @@ if __name__ == "__main__":
             do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
-            do_visualization(1000, max_steps, 1000, all_param_settings)
+            do_visualization(10, max_steps, 1000, all_param_settings)
 
     print("Experiment completed!")
