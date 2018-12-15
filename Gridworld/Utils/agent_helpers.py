@@ -50,12 +50,12 @@ def create_truncated_model(trained_model):
 def compute_CCA_discrete(model_snapshots):
     "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across all states"
 
-    cca_results = []
     max_x_val = e_globs.MAX_COLUMN + 1
     max_y_val = e_globs.MAX_ROW + 1
-    truncated_trained_model = create_truncated_model(a_globs.model)
+    truncated_trained_model = create_truncated_model(model_snapshots[-1])
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
-    #print(hidden_layer_feature_shape)
+
+    mean_similarity_scores = []
     for model in model_snapshots:
         cur_truncated_model = create_truncated_model(model)
         cur_layer_representations = np.empty((hidden_layer_feature_shape[1], max_x_val * max_y_val))
@@ -75,29 +75,34 @@ def compute_CCA_discrete(model_snapshots):
                 i += 1
 
         #print(cur_layer_representations.shape)
-        cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
-        x = cca_results[0]
+        cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
+        #print(cca_results)
         # print('Neuron coefficients')
         # print('1')
         # print(x['neuron_coeffs1'])
         # print('2')
-        # print(x['neuron_coeffs2'])
+        #print(x['neuron_coeffs2'])
         # print('cca coefficients')
         # print('1')
-        # print(x['cca_coef1'])
+        # print(cca_results['cca_coef1'])
         # print('2')
-        # print(x['cca_coef2'])
-        #print('cca directions')
-        #print(x['cca_dirns1'])
-        return cca_results
+        # print(cca_results['cca_coef2'])
+        # print('cca directions')
+        # print(x['cca_dirns1'])
+        if len(cca_results['cca_coef1']) > len(cca_results['cca_coef2']):
+            mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
+        else:
+            mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
+    print('mean_similarity scores')
+    print(mean_similarity_scores)
+    return mean_similarity_scores
 
 def compute_CCA_continuous(plot_range, model_snapshots):
     "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across a number of evenly sampled states equal to plot_range^2"
 
-    cca_results = []
-    truncated_trained_model = create_truncated_model(a_globs.model)
+    truncated_trained_model = create_truncated_model(model_snapshots[-1])
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
-    #print(hidden_layer_feature_shape)
+    mean_similarity_scores = []
     for model in model_snapshots:
         cur_truncated_model = create_truncated_model(model)
         cur_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
@@ -119,9 +124,28 @@ def compute_CCA_continuous(plot_range, model_snapshots):
                 i += 1
 
         #print(cur_layer_representations.shape)
-        cca_results.append(get_cca_similarity(cur_layer_representations, trained_layer_representations))
-        #print(cca_results[0])
-        return cca_results
+        cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
+        print(cca_results)
+        # print('Neuron coefficients')
+        # print('1')
+        # print(x['neuron_coeffs1'])
+        # print('2')
+        #print(x['neuron_coeffs2'])
+        print('cca coefficients')
+        print('1')
+        print(cca_results['cca_coef1'])
+        print('2')
+        print(cca_results['cca_coef2'])
+        # print('cca directions')
+        # print(x['cca_dirns1'])
+        if len(cca_results['cca_coef1']) > len(cca_results['cca_coef2']):
+            mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
+        else:
+            mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
+    print('mean_similarity scores')
+    print(mean_similarity_scores)
+    return mean_similarity_scores
+
 
 def compute_t_SNE_discrete():
     "Computes the representations learned in the last hidden layer of the neural network for all states"

@@ -126,14 +126,11 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
             for episode in range(num_episodes):
                 print("episode number : {}".format(episode))
 
-                if is_neural(cur_agent) and (episode / num_episodes) in CCA_SNAPSHOT_POINTS:
+                if is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                      MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
 
                 RL_episode(max_steps)
                 RL_cleanup()
-
-            if is_neural(cur_agent):
-                MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',))) #To ensure that we get the final fully trained model
 
             if args.save_model:
                 save_model(a_globs.model, RESULTS_FILE_NAME + str(setting))
@@ -145,8 +142,8 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.set_title('{} Agent Value Function'.format(cur_agent));
-    ax.set_xlabel('X position')
-    ax.set_ylabel('Y position')
+    ax.set_xlabel('Column position')
+    ax.set_ylabel('Row position')
     ax.set_zlabel('Value')
     ax.plot_wireframe(x_values, y_values, plot_values)
 
@@ -180,25 +177,28 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
             print("Displaying the t-SNE results...")
             plt.show()
 
-        cca_results = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
-        #print(cca_results)
+        mean_similarity_scores = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
+        save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity')
+        episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
 
-        #TODO: Plot the CCA results appropriately
-        # print("Plotting the CCA results")
-        # plt.figure(figsize=(10,10))
-        # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-        # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        # plt.show()
-        #
-        # if RESULTS_FILE_NAME:
-        #     print("Saving the results...")
-        #     if suffix:
-        #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-        #     else:
-        #         plt.savefig("{} {} CCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-        # else:
-        #     print("Displaying the CCA results...")
-        #     plt.show()
+        plt.ylabel('SVCCA Similarity')
+        plt.xlabel("Episode")
+        plt.title("SVCCA Network Self-Similarity Across Time")
+        plt.xticks(np.arange(0, num_episodes + 1, args.trial_frequency))
+        plt.axis([0, num_episodes, 0, 1.0])
+        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        plt.plot(episodes, mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+        do_plotting(filename=RESULTS_FILE_NAME + "SVCCA_similarity")
+
+        if RESULTS_FILE_NAME:
+            print("Saving the results...")
+            if suffix:
+                plt.savefig("{} {} SVCCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            else:
+                plt.savefig("{} {} SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        else:
+            print("Displaying the SVCCA results...")
+            plt.show()
 
 #NOTE: Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
@@ -255,7 +255,8 @@ def send_params(cur_agent, param_setting):
 AUX_AGENTS = []
 #AGENTS = []
 AGENTS = ['neural']
-CCA_SNAPSHOT_POINTS = [0.0, 0.25, 0.50, 0.75, 1.00] #The percentage of training time for the snapshots of the neural network being visualized with CCA
+#Use args.trial frequency to determine snapshot points instead
+#CCA_SNAPSHOT_POINTS = [0, 25, 50, 75, 100, 125] #The episodes during a run for which a snapshot of the model should be taken for SVCCA analysis
 MODEL_SNAPSHOTS = []
 
 if __name__ == "__main__":
@@ -412,7 +413,7 @@ if __name__ == "__main__":
                     RL_cleanup()
 
                     #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                    if args.q_plot and episode % args.trial_frequency == 0 and (is_neural(cur_agent)):
+                    if args.q_plot and is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                         print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
                         a_globs.is_trial_episode = True
                         RL_episode(max_steps)
@@ -422,6 +423,7 @@ if __name__ == "__main__":
 
                 cur_param_results.append(run_results)
                 cur_Q_param_results.append(Q_run_results)
+
             all_results.append(cur_param_results)
             all_param_settings.append(param_setting)
             all_Q_results.append(cur_Q_param_results)
@@ -581,7 +583,7 @@ if __name__ == "__main__":
             avg_results = []
             for i in range(len(all_Q_results)):
                 avg_results.append([np.mean(run) for run in zip(*all_Q_results[i])])
-                cur_data = [episode for episode in range(0, num_episodes, args.trial_frequency)]
+                cur_data = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 cur_agent = str(all_param_settings[i][0])
 
                 save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
@@ -599,6 +601,6 @@ if __name__ == "__main__":
             do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
-            do_visualization(10, max_steps, 1000, all_param_settings)
+            do_visualization(3000, max_steps, 1000, all_param_settings)
 
     print("Experiment completed!")
