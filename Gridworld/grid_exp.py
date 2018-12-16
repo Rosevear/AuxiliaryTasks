@@ -41,39 +41,49 @@ import matplotlib.pyplot as plt
 ###### HELPER FUNCTIONS START ##############
 
 #NOTE:  Save and load model taken from https://machinelearningmastery.com/save-load-keras-deep-learning-models/, by Jason Brownlee, on December 13th 2018, and modified to suit the current purpose
-def save_model(model, filename):
+def save_model(models, filename):
     "Save the current model architecture to disk in a in a json format and the weights in HDF5 format."
 
     # serialize model to JSON
+    filename = filename.replace(' ', '_')
     try:
-        model_json = model.to_json()
-        with open(MODELS_DIR + filename + '.json', "w") as json_file:
-            json_file.write(model_json)
-        print("Succesfully saved the model architecture")
+        i = 0
+        for model in models:
+            model_json = model.to_json()
+            with open('{}{}_snapshot_{}.json'.format(MODELS_DIR, filename, str(i)), "w") as json_file:
+                json_file.write(model_json)
+            print("Succesfully saved the model architecture")
 
-        # serialize weights to HDF5
-        model.save_weights(MODELS_DIR + filename + ".h5")
-        print("Sucessfully saved them odel weights")
+            # serialize weights to HDF5
+            model.save_weights('{}{}_snapshot_{}.h5'.format(MODELS_DIR, filename, str(i)))
+            print("Sucessfully saved the model weights")
+            i += 1
     except IOError as cur_exception:
          print("ERROR: Could not save the model: {}".format(os.strerror(cur_exception.errno)))
 
-def load_model(filename):
-    "Load the currently saved model architecture and weights from disk"
+
+def load_models(filenames):
+    """
+    Load the currently saved model architecture and weights from disk for each
+    of the files specified in fileneames, a string of filenames delimited by spaces
+    """
 
     # load weights into new model
     try:
-        print(MODELS_DIR + filename + '.json')
-        json_file = open(MODELS_DIR + filename + '.json', 'r')
-        loaded_model_json = json_file.read()
-        json_file.close()
-        loaded_model = model_from_json(loaded_model_json)
-        print("Succesfully loaded the model architecture")
+        model_snapshots = []
+        for model_filename in filenames:
+            print(MODELS_DIR + model_filename + '.json')
+            json_file = open('{}{}.json'.format(MODELS_DIR, model_filename), 'r')
+            loaded_model_json = json_file.read()
+            json_file.close()
+            loaded_model = model_from_json(loaded_model_json)
+            print("Succesfully loaded the model architecture")
 
-        # load weights into new model
-        loaded_model.load_weights(MODELS_DIR + filename + ".h5")
-        print("Successfully loaded the model weights")
-
-        return loaded_model
+            # load weights into new model
+            loaded_model.load_weights("{}{}.h5".format(MODELS_DIR, model_filename))
+            print("Successfully loaded the model weights")
+            model_snapshots.append(loaded_model)
+        return model_snapshots
     except IOError as cur_exception:
          print("ERROR: Could not load the model: {}".format(os.strerror(cur_exception.errno)))
 
@@ -103,39 +113,40 @@ def do_plotting(suffix=0, filename=None):
         print("Displaying the results...")
         plt.show()
 
-def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix=0):
+def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
-    if args.load_model:
-        a_globs.model = load_model(args.load_model)
-        cur_agent = a_globs.NEURAL
+    cur_agent = setting[0]
+    send_params(cur_agent, setting)
+    RL_init()
 
+    if args.load_models:
+        #WE have we need to visualize, so skip training, load them, and jump to visualizing
+        MODEL_SNAPSHOTS = load_models(args.load_models.split())
+        a_globs.model = MODEL_SNAPSHOTS[-1]
     else:
+        #Do the training to visualize
+        MODEL_SNAPSHOTS = []
+        cur_agent = setting[0]
+        print("Performing a single {} episode long run to train the model for visualization for the {} agent".format(num_episodes, cur_agent))
+        print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
         np.random.seed(2)
         random.seed(2)
-        # print('param settings')
-        # print(param_settings)
-        for setting in param_settings:
-            cur_agent = setting[0]
+        for episode in range(num_episodes):
+            print("episode number : {}".format(episode))
 
-            #TODO: Consider adding a loop here to get the values for all agents first, so that we can plot them on the same grid (specifically for t-SNE)
-            print("Performing a single {} episode long run to train the model for visualization for the {} agent".format(num_episodes, cur_agent))
-            print('Parameters: agent = {}, alpha = {}, gamma = {}'.format(cur_agent, setting[1], setting[2]))
-            send_params(cur_agent, setting)
-            RL_init()
-            for episode in range(num_episodes):
-                print("episode number : {}".format(episode))
+            if is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
+                 MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
 
-                if is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
-                     MODEL_SNAPSHOTS.append(RL_agent_message(('GET_SNAPSHOT',)))
+            RL_episode(max_steps)
+            RL_cleanup()
 
-                RL_episode(max_steps)
-                RL_cleanup()
+        if args.save_model:
+            save_model(MODEL_SNAPSHOTS, RESULTS_FILE_NAME)
 
-            if args.save_model:
-                save_model(a_globs.model, RESULTS_FILE_NAME + str(setting))
-
+    #Perform all the visualization computation and plotting
     #Get the values for the value function
+    #print(a_globs.model)
     (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
 
     print("Plotting the 3D value function plot")
@@ -183,11 +194,19 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
 
         plt.ylabel('SVCCA Similarity')
         plt.xlabel("Episode")
-        plt.title("SVCCA Network Self-Similarity Across Time")
-        #plt.xticks(np.arange(0, num_episodes + 1, args.trial_frequency))
-        plt.axis([0, num_episodes, 0, 1.0])
+        plt.title("SVCCA Network Similarity Across Time")
         plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        plt.plot(episodes, mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+
+        if args.load_models:
+            axes = plt.gca()
+            axes.set_ylim([0.0, 1.0])
+            print(mean_similarity_scores)
+            plt.plot(mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+        else:
+            plt.axis([0, num_episodes, 0, 1.0])
+            plt.plot(episodes, mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+        plt.show()
+
         do_plotting(filename=RESULTS_FILE_NAME + "SVCCA_similarity")
 
         if RESULTS_FILE_NAME:
@@ -327,8 +346,8 @@ if __name__ == "__main__":
     #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
     #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
     parser.add_argument('-plot_files', nargs='?', type=str, help='The file names of results files to load and plot. The files must be present in the Results directory.')
-    parser.add_argument('-load_model', nargs='?', type=str, help='The file name of a pre-trained model to load. The corresponding json and HDF5 files, named the same as the value provided here for input, must be present in the Models directory. This applies only to neural network based agents.')
-    parser.add_argument('--save_model', action='store_true', help='Whether to save the models trained for the current run of the program. If no filename is provided via the filename paramter, the default filename will be used. Default = false.')
+    parser.add_argument('--save_model', action='store_true', help='Whether to save the model snapshots trained for the current run of the program.')
+    parser.add_argument('-load_models', nargs='?', type=str, help='The file names of a pre-trained model snapshots to load for visualization.')
     parser.add_argument('-trial_frequency', nargs='?', type=int, default=5, help='The number of episoodes after which to run a trial of the polic learned by the Q-Agent. The default is trial_frequency = 10')
     parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
@@ -419,10 +438,6 @@ if __name__ == "__main__":
     max_steps = args.max
     num_runs = args.run
 
-    if args.plot_files:
-        #print([args.plot_files])
-        plot_files(args.plot_files.split())
-        exit("Plotting Completed!")
 
     #The main experiment loop
     if not args.sweep_neural:
@@ -458,6 +473,16 @@ if __name__ == "__main__":
                 RLGlue("{}.{}_env".format(ENV_DIR, args.env), "{}.aux_agent".format(AGENT_DIR))
             else:
                 exit('ERROR: Invalid agent string {} provided!'.format(cur_agent))
+
+            #These do not require the main experiment to finish, so we finish early
+            if args.plot_files:
+                plot_files(args.plot_files.split())
+                exit("Performance Plotting Completed!")
+
+            if args.visualize:
+                do_visualization(num_episodes, max_steps, 1000, all_params[0])
+                exit("Visualization Completed!")
+
 
             cur_param_results = []
             cur_Q_param_results = []
@@ -675,8 +700,5 @@ if __name__ == "__main__":
                     plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2])))
             setup_plot(args.trial_frequency, 'Q_results')
             do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
-
-        if args.visualize:
-            do_visualization(10, max_steps, 1000, all_param_settings)
 
     print("Experiment completed!")

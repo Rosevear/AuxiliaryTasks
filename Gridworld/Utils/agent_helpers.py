@@ -21,7 +21,7 @@ import copy
 from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
 from keras.initializers import he_normal
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import RMSprop, Adam, Adagrad, SGD
 from keras.utils import plot_model
 
 from sklearn.manifold import TSNE
@@ -31,6 +31,8 @@ from Utils.cca_core import *
 #It has been modified to suit the present purpose. Original author:  Siddhartha Banerjee
 def create_truncated_model(trained_model):
     "Return a model equivalent to trained model in terms of architecture and weights, but without the last layer"
+
+    optimizer_map = {'Adam' : Adam(lr=a_globs.ALPHA), 'RMSprop' : RMSprop(lr=a_globs.ALPHA), 'Adagrad' : Adagrad(lr=a_globs.ALPHA), 'SGD': SGD(lr=a_globs.ALPHA)}
 
     if a_globs.AGENT == a_globs.NEURAL:
         model = Sequential()
@@ -42,13 +44,17 @@ def create_truncated_model(trained_model):
         main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', name='main_task_full_layer')(shared_1)
         model = Model(inputs=main_input, outputs=main_task_full_layer)
 
-    model.compile(loss='mse', optimizer=RMSprop(lr=a_globs.ALPHA))
+    model.compile(loss='mse', optimizer=optimizer_map[a_globs.OPTIMIZER])
     for i, layer in enumerate(model.layers):
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
 
 def compute_CCA_discrete(model_snapshots):
-    "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across all states"
+    """
+    Compute the CCA similarity for the network's final layer across all states
+    between the last for the snapshot at the end of model_snapshots with all the
+    other models in the snapshot list
+    """
 
     max_x_val = e_globs.MAX_COLUMN + 1
     max_y_val = e_globs.MAX_ROW + 1
@@ -98,7 +104,12 @@ def compute_CCA_discrete(model_snapshots):
     return mean_similarity_scores
 
 def compute_CCA_continuous(plot_range, model_snapshots):
-    "Compute the CCA similarity for the network at the current time for the last hidden layer of the network across a number of evenly sampled states equal to plot_range^2"
+    """
+    Compute the CCA similarity for the network's final layer across across a
+    number of evenly sampled states equal to plot_range^2 between the last for
+    the snapshot at the end of model_snapshots with all the other models in the
+    snapshot list
+    """
 
     truncated_trained_model = create_truncated_model(model_snapshots[-1])
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
@@ -717,6 +728,7 @@ def coordinate_states_encoding(states):
 
     #flatten the states list
     #[item for sublist in l for item in sublist]
+    #print(a_globs.FEATURE_VECTOR_SIZE)
     states = [coordinate for state in states for coordinate in state]
     formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 

@@ -3,7 +3,7 @@ from collections import namedtuple
 #Directory locations for the agents and environments, relative to the Gridworld directory
 AGENT_DIR = 'Agents'
 ENV_DIR = 'Envs'
-MODELS_DIR_DIR = 'Models/'
+MODELS_DIR = 'Models/'
 RESULTS_DIR = 'Results/'
 
 #Environments
