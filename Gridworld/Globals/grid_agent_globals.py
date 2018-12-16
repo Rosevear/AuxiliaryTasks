@@ -24,7 +24,7 @@ IS_DISCRETE = None
 FEATURE_VECTOR_SIZE = None
 AUX_FEATURE_VECTOR_SIZE = None
 
-OPTIMIZER = 'Adam'
+OPTIMIZER = 'RMSprop'
 INIT = 'glorot'
 
 #Number of output nodes used in the noisy and redundant auxiliary tasks, respectively

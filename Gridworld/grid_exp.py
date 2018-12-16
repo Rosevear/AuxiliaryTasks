@@ -237,8 +237,9 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
         results_file.write('{} agent summary statistics\n'.format(agent_string))
         results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(results), np.std(results)))
 
+        filename = filename.replace(' ', '_')
         if q_plot:
-            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+            with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 results_tuple = Results_tuple("Steps Per Episode Across Time (Offline Evaluation)", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
                 print("Saving results tuple!")
@@ -246,14 +247,14 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
                 pickle.dump(results_tuple, results_file_pickled)
 
         elif visualize:
-            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+            with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 results_tuple = Results_tuple("Network Self-Similarity Across Time", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'SVCCA Similarity', 1.0)
                 print("Saving results tuple!")
                 print(results_tuple)
                 pickle.dump(results_tuple, results_file_pickled)
         else:
-            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+            with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(num_episodes)]
                 results_tuple = Results_tuple("Steps Per Episode Across Time (Online Evaluation)", agent_string, results, episodes, 1, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
                 print("Saving results tuple!")
@@ -420,7 +421,7 @@ if __name__ == "__main__":
 
     if args.plot_files:
         #print([args.plot_files])
-        plot_files([args.plot_files])
+        plot_files(args.plot_files.split())
         exit("Plotting Completed!")
 
     #The main experiment loop
