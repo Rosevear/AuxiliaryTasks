@@ -42,7 +42,7 @@ def create_truncated_model(trained_model):
         main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', name='main_task_full_layer')(shared_1)
         model = Model(inputs=main_input, outputs=main_task_full_layer)
 
-    model.compile(loss='mse', optimizer=Adam(lr=a_globs.ALPHA))
+    model.compile(loss='mse', optimizer=RMSprop(lr=a_globs.ALPHA))
     for i, layer in enumerate(model.layers):
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
@@ -93,8 +93,8 @@ def compute_CCA_discrete(model_snapshots):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
         else:
             mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
-    print('mean_similarity scores')
-    print(mean_similarity_scores)
+    # print('mean_similarity scores')
+    # print(mean_similarity_scores)
     return mean_similarity_scores
 
 def compute_CCA_continuous(plot_range, model_snapshots):
@@ -125,25 +125,25 @@ def compute_CCA_continuous(plot_range, model_snapshots):
 
         #print(cur_layer_representations.shape)
         cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
-        print(cca_results)
+        # print(cca_results)
         # print('Neuron coefficients')
         # print('1')
         # print(x['neuron_coeffs1'])
         # print('2')
         #print(x['neuron_coeffs2'])
-        print('cca coefficients')
-        print('1')
-        print(cca_results['cca_coef1'])
-        print('2')
-        print(cca_results['cca_coef2'])
+        # print('cca coefficients')
+        # print('1')
+        # print(cca_results['cca_coef1'])
+        # print('2')
+        # print(cca_results['cca_coef2'])
         # print('cca directions')
         # print(x['cca_dirns1'])
         if len(cca_results['cca_coef1']) > len(cca_results['cca_coef2']):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
         else:
             mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
-    print('mean_similarity scores')
-    print(mean_similarity_scores)
+    # print('mean_similarity scores')
+    # print(mean_similarity_scores)
     return mean_similarity_scores
 
 
@@ -546,7 +546,7 @@ def do_auxiliary_learning(cur_state, next_state, reward):
         # print(batch_targets)
         # print('batch aux taergets')
         # print(batch_aux_targets)
-        a_globs.model.fit(batch_inputs, [batch_targets, batch_aux_targets], batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
+        #a_globs.model.fit(batch_inputs, [batch_targets, batch_aux_targets], batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     """
@@ -592,14 +592,15 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
         else:
             exit("ERROR: Invalid agent specified! No corresponding buffer to use!")
 
+#NOTE: THIS USES NAMED TUPLE WRONG. WE NEED TO TREAT THE RESULT OF NAMED TUPLE AS A FACTORY AND CREATE INSTANCES FROM THE FACTORY
 def construct_observation(cur_states, cur_actions, reward, next_state):
     "Construct the observation used by the auxiliary tasks"
 
-    cur_observation = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
-    cur_observation.states = list(cur_states)
-    cur_observation.actions = list(cur_actions)
-    cur_observation.reward = reward
-    cur_observation.next_state = next_state
+    cur_observation = Transition(list(cur_states), list(cur_actions), reward, next_state)
+    # cur_observation.states = list(cur_states)
+    # cur_observation.actions = list(cur_actions)
+    # cur_observation.reward = reward
+    # cur_observation.next_state = next_state
 
     return cur_observation
 

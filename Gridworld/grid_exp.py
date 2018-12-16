@@ -16,6 +16,7 @@ from rl_glue import *  # Required for RL-Glue
 from Globals.generic_globals import *
 import Globals.grid_agent_globals as a_globs
 
+import pickle
 import argparse
 import json
 import random
@@ -28,7 +29,7 @@ from itertools import product
 from collections import namedtuple
 from math import log
 from mpl_toolkits.mplot3d import Axes3D
-from keras.models import model_from_json
+from keras.models import model_from_json, clone_model
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -46,13 +47,12 @@ def save_model(model, filename):
     # serialize model to JSON
     try:
         model_json = model.to_json()
-        with open(MODELS + filename + '.json', "w") as json_file:
+        with open(MODELS_DIR + filename + '.json', "w") as json_file:
             json_file.write(model_json)
-
         print("Succesfully saved the model architecture")
 
         # serialize weights to HDF5
-        model.save_weights(MODELS + filename + ".h5")
+        model.save_weights(MODELS_DIR + filename + ".h5")
         print("Sucessfully saved them odel weights")
     except IOError as cur_exception:
          print("ERROR: Could not save the model: {}".format(os.strerror(cur_exception.errno)))
@@ -62,15 +62,15 @@ def load_model(filename):
 
     # load weights into new model
     try:
-        print(MODELS + filename + '.json')
-        json_file = open(MODELS + filename + '.json', 'r')
+        print(MODELS_DIR + filename + '.json')
+        json_file = open(MODELS_DIR + filename + '.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         loaded_model = model_from_json(loaded_model_json)
         print("Succesfully loaded the model architecture")
 
         # load weights into new model
-        loaded_model.load_weights(MODELS + filename + ".h5")
+        loaded_model.load_weights(MODELS_DIR + filename + ".h5")
         print("Successfully loaded the model weights")
 
         return loaded_model
@@ -178,13 +178,13 @@ def do_visualization(num_episodes, max_steps, plot_range, param_settings, suffix
             plt.show()
 
         mean_similarity_scores = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
-        save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity')
+        save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity', visualize=True)
         episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
 
         plt.ylabel('SVCCA Similarity')
         plt.xlabel("Episode")
         plt.title("SVCCA Network Self-Similarity Across Time")
-        plt.xticks(np.arange(0, num_episodes + 1, args.trial_frequency))
+        #plt.xticks(np.arange(0, num_episodes + 1, args.trial_frequency))
         plt.axis([0, num_episodes, 0, 1.0])
         plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
         plt.plot(episodes, mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
@@ -215,18 +215,78 @@ def sample_params_log_uniform(start, end, num_samples):
     params = [round(10 ** cur_log, 5) for cur_log in param_logs]
     return params
 
-def save_results(results, cur_agent, filename='Default File Name'):
+
+def save_results(results, cur_agent, filename='Default File Name', q_plot=False, visualize=False):
     """
     Compute the mean and standard deviation of the current results,
-    and save the results and statistics to the specified file
+    and save the results and statistics to the specified file.
+
+    Both a human readable version of the file, and a pickled file that serializes
+    the data, will be created.
     """
 
-    with open('{} results'.format(filename), 'a+') as results_file:
-        results_file.write('{} average results\n'.format(cur_agent))
+    if is_neural(cur_agent):
+        agent_string = cur_agent + ' ' + a_globs.OPTIMIZER + ' ' + a_globs.INIT
+    else:
+        agent_string = cur_agent
+
+    with open(RESULTS_DIR + '{} results'.format(filename), 'w') as results_file:
+        results_file.write('{} average results\n'.format(agent_string))
         results_file.write(json.dumps(results))
         results_file.write('\n')
-        results_file.write('{} agent summary statistics\n'.format(cur_agent))
+        results_file.write('{} agent summary statistics\n'.format(agent_string))
         results_file.write('mean: {} standard deviation: {}\n'.format(np.mean(results), np.std(results)))
+
+        if q_plot:
+            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+                episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
+                results_tuple = Results_tuple("Steps Per Episode Across Time (Offline Evaluation)", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
+                print("Saving results tuple!")
+                print(results_tuple)
+                pickle.dump(results_tuple, results_file_pickled)
+
+        elif visualize:
+            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+                episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
+                results_tuple = Results_tuple("Network Self-Similarity Across Time", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'SVCCA Similarity', 1.0)
+                print("Saving results tuple!")
+                print(results_tuple)
+                pickle.dump(results_tuple, results_file_pickled)
+        else:
+            with open(RESULTS_DIR + '{} pickled'.format(filename), 'w') as results_file_pickled:
+                episodes = [episode for episode in range(num_episodes)]
+                results_tuple = Results_tuple("Steps Per Episode Across Time (Online Evaluation)", agent_string, results, episodes, 1, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
+                print("Saving results tuple!")
+                print(results_tuple)
+                pickle.dump(results_tuple, results_file_pickled)
+
+def load_data(filename):
+    """
+    Loads the data sepcified in filename from the Results directory.
+    """
+
+    with open(RESULTS_DIR + '{}'.format(filename), 'r') as results_file_pickled:
+        results = pickle.load(results_file_pickled)
+    return results
+
+def plot_files(result_files):
+    "Plot the results for the list of files in result_files, all on the same chart for easy comparison"
+
+    i = 0
+    for result_file in result_files:
+        cur_results = load_data(result_file)
+        print('Loading Results tuple!')
+        print(cur_results)
+        plt.plot(cur_results.x_values, cur_results.data, GRAPH_COLOURS[i], label="AGENT = {}".format(cur_results.agent_type))
+        i += 1
+
+    plt.ylabel(cur_results.y_label)
+    plt.xlabel(cur_results.x_label)
+    plt.title(cur_results.plot_title)
+    plt.xticks(np.arange(0, cur_results.x_max_val, cur_results.x_value_frequency))
+    plt.axis([0, cur_results.x_max_val, 0, cur_results.y_max_val])
+    plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+    plt.show()
 
 def write_to_log(contents, filename=LOG_FILE_NAME):
     "Write the contents to file filename."
@@ -265,7 +325,9 @@ if __name__ == "__main__":
     #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
     #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
     #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
+    parser.add_argument('-plot_files', nargs='?', type=str, help='The file names of results files to load and plot. The files must be present in the Results directory.')
     parser.add_argument('-load_model', nargs='?', type=str, help='The file name of a pre-trained model to load. The corresponding json and HDF5 files, named the same as the value provided here for input, must be present in the Models directory. This applies only to neural network based agents.')
+    parser.add_argument('--save_model', action='store_true', help='Whether to save the models trained for the current run of the program. If no filename is provided via the filename paramter, the default filename will be used. Default = false.')
     parser.add_argument('-trial_frequency', nargs='?', type=int, default=5, help='The number of episoodes after which to run a trial of the polic learned by the Q-Agent. The default is trial_frequency = 10')
     parser.add_argument('-max', nargs='?', type=int, default=1000, help='The maximum number of stepds the agent can take before the episode terminates. The default is max = 1000')
     parser.add_argument('-run', nargs='?', type=int, default=10, help='The number of independent runs per agent. Default value = 10.')
@@ -288,7 +350,6 @@ if __name__ == "__main__":
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
     parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
     parser.add_argument('--q_plot', action='store_true', help='Whether to plot the performance of the q policy periodically. Default = false')
-    parser.add_argument('--save_model', action='store_true', help='Whether to save the models trained for the current run of the program. If no filename is provided via the filename paramter, the default filename will be used. Default = false.')
 
     args = parser.parse_args()
 
@@ -357,6 +418,11 @@ if __name__ == "__main__":
     max_steps = args.max
     num_runs = args.run
 
+    if args.plot_files:
+        #print([args.plot_files])
+        plot_files([args.plot_files])
+        exit("Plotting Completed!")
+
     #The main experiment loop
     if not args.sweep_neural:
         all_params = list(product(AGENTS, alpha_params, gamma_params)) + list(product(AUX_AGENTS, alpha_params, gamma_params, replay_context_sizes, lambda_params))
@@ -406,20 +472,34 @@ if __name__ == "__main__":
                 Q_run_results = []
                 print("Run number: {}".format(str(run)))
                 RL_init()
+                #online_model = clone_model(a_globs.model)
                 for episode in range(num_episodes):
                     print("Episode number: {}".format(str(episode)))
+                    # print('num steps prior to episode start')
+                    # print(RL_num_steps())
                     RL_episode(max_steps)
+                    # print('online results')
+                    # print(run_results)
+                    # print('num steps after episode')
+                    # print(RL_num_steps())
                     run_results.append(RL_num_steps())
                     RL_cleanup()
+                    #print(run_results)
 
                     #Run a test trial without learning or exploration to test the off-policy learned by the agent
                     if args.q_plot and is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                         print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
+                        old_weights = a_globs.model.get_weights()
                         a_globs.is_trial_episode = True
                         RL_episode(max_steps)
+                        # print('offline results')
+                        # print(Q_run_results)
                         Q_run_results.append(RL_num_steps())
                         RL_cleanup()
                         a_globs.is_trial_episode = False
+                        a_globs.model.set_weights(old_weights)
+                        # print(RL_num_steps())
+                        # print(Q_run_results)
 
                 cur_param_results.append(run_results)
                 cur_Q_param_results.append(Q_run_results)
@@ -455,7 +535,7 @@ if __name__ == "__main__":
                 cur_data = [np.mean(run) for run in zip(*all_Q_results[i])]
                 episodes = [episode for episode in range(0, num_episodes, args.trial_frequency)]
 
-                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i))
+                save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i), q_plot=True)
 
                 plt.figure()
                 #print(episodes)
@@ -586,12 +666,7 @@ if __name__ == "__main__":
                 cur_data = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 cur_agent = str(all_param_settings[i][0])
 
-                save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results')
-
-                # print('cur data')
-                # print(cur_data)
-                # print('results')
-                # print(avg_results[i])
+                save_results(avg_results[i], cur_agent, RESULTS_FILE_NAME + 'Q_results', q_plot=True)
 
                 if cur_agent in AUX_AGENTS:
                     plt.plot(cur_data, avg_results[i], GRAPH_COLOURS[i], label="AGENT = {} Alpha = {} Gamma = {} N = {}, Lambda = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][2]), all_Q_param_settings[i][3], str(all_Q_param_settings[i][4])))
@@ -601,6 +676,6 @@ if __name__ == "__main__":
             do_plotting(filename=RESULTS_FILE_NAME + "Q_results")
 
         if args.visualize:
-            do_visualization(3000, max_steps, 1000, all_param_settings)
+            do_visualization(10, max_steps, 1000, all_param_settings)
 
     print("Experiment completed!")
