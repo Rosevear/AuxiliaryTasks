@@ -173,10 +173,16 @@ def compute_t_SNE_discrete():
 
     #Compute the last hidden layer state representation for each state
     i = 0
+    states_of_interest = [e_globs.START_STATE]
+    marker_colours = []
     for x in range(max_x_val):
         for y in range(max_y_val):
             #State formatters expect a list of states in [row, column] format
             cur_state = [y, x]
+            if cur_state in states_of_interest:
+                marker_colours.append(EMPHASIS_POINT)
+            else:
+                marker_colours.append(NORMAL_POINT)
             cur_state_formatted = format_states([cur_state])
             hidden_layer_features = truncated_model.predict(cur_state_formatted)
             state_network_representations[i] = hidden_layer_features
@@ -205,7 +211,7 @@ def compute_t_SNE_discrete():
     # print(tsne_results.shape)
     #print(tsne_results[:, 0])
 
-    return tsne_results
+    return tsne_results, marker_colours
 
 def compute_t_SNE_continuous(plot_range):
     "Compute the values for the current value function across a number of evenly sampled states equal to plot_range^2"
@@ -216,6 +222,8 @@ def compute_t_SNE_continuous(plot_range):
     state_network_representations = np.empty((plot_range ** 2, hidden_layer_feature_shape[1]))
 
     #Compute the last hidden layer state representation for each state
+    states_of_interest = [cont_e_globs.START_STATE]
+    marker_colours = []
     i = 0
     for x in range(plot_range):
         scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
@@ -223,6 +231,10 @@ def compute_t_SNE_continuous(plot_range):
             #State formatters expect a list of states in [row, column] format
             scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]
+            if [y, x] in states_of_interest:
+                marker_colours.append(EMPHASIS_POINT)
+            else:
+                marker_colours.append(NORMAL_POINT)
             cur_state_formatted = format_states([cur_state])
             hidden_layer_features = truncated_model.predict(cur_state_formatted)
             state_network_representations[i] = hidden_layer_features
@@ -251,7 +263,7 @@ def compute_t_SNE_continuous(plot_range):
     # print(tsne_results.shape)
     #print(tsne_results[:, 0])
 
-    return tsne_results
+    return tsne_results, marker_colours
 
 def compute_state_action_values_discrete():
     "Compute the values for the current value function across all of the states"

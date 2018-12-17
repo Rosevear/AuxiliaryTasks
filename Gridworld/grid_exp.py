@@ -172,11 +172,12 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
 
     #Get the last layer representation for each state and visualize using t-SNE
     if is_neural(cur_agent):
-        tsne_results = RL_agent_message(('t-SNE', plot_range))
+        tsne_results, marker_colours = RL_agent_message(('t-SNE', plot_range))
+        #print(tsne_results)
 
         print("Plotting the t-SNE results")
         plt.figure(figsize=(10,10))
-        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=marker_colours)
         plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
         plt.show()
 
