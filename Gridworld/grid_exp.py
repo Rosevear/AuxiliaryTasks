@@ -30,6 +30,8 @@ from collections import namedtuple
 from math import log
 from mpl_toolkits.mplot3d import Axes3D
 from keras.models import model_from_json, clone_model
+from scipy.stats import pearsonr, spearmanr
+from sklearn.manifold import TSNE
 
 import matplotlib as mpl
 if platform.system() == 'Darwin':
@@ -188,7 +190,8 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
             print("Displaying the t-SNE results...")
             plt.show()
 
-        mean_similarity_scores = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
+        #Get the SVCCA similarity score
+        mean_similarity_scores, neurons = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
         save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity', visualize=True)
         episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
 
@@ -217,6 +220,26 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
                 plt.savefig("{} {} SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
         else:
             print("Displaying the SVCCA results...")
+            plt.show()
+
+        #Do t-sne on the SVCCA representation of the layer
+        tsne = TSNE(n_components=2, verbose=1)
+        tsne_results = tsne.fit_transform(neurons)
+
+        print("Plotting the t-SNE SVCCA preprocessed results")
+        plt.figure(figsize=(10,10))
+        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        plt.show()
+
+        if RESULTS_FILE_NAME:
+            print("Saving the results...")
+            if suffix:
+                plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+            else:
+                plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        else:
+            print("Displaying the t-SNE-SVCCA results...")
             plt.show()
 
 #NOTE: Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
@@ -288,6 +311,53 @@ def load_data(filename):
     with open(RESULTS_DIR + '{}'.format(filename), 'r') as results_file_pickled:
         results = pickle.load(results_file_pickled)
     return results
+
+def compute_correlations(file_1, file_2):
+    """
+    Compute the corelation coefficient between the data stored in file1 and
+    file 2, and report the associated p-value
+    """
+
+    # x = load_data(file_1).data
+    # y = load_data(file_2).data
+    #
+    # x = np.asarray(x)
+    # y = np.asarray(y)
+    # n = len(x)
+    # mx = x.mean()
+    # my = y.mean()
+    # xm, ym = x-mx, y-my
+    # r_num = np.add.reduce(xm * ym)
+    # r_den = np.sqrt(ss(xm) * ss(ym))
+    #
+    # print(r_num)
+    # print(r_den)
+    # r = r_num / r_den
+    #
+    # # Presumably, if abs(r) > 1, then it is only some small artifact of floating
+    # # point arithmetic.
+    # r = max(min(r, 1.0), -1.0)
+    # df = n-2
+    # if abs(r) == 1.0:
+    #     prob = 0.0
+    # else:
+    #     t_squared = r*r * (df / ((1.0 - r) * (1.0 + r)))
+    #     prob = betai(0.5*df, 0.5, df / (df + t_squared))
+    # return r, prob
+
+
+    file_1_data = load_data(file_1).data
+    file_2_data = load_data(file_2).data
+
+    #print(file_1_data)
+    #print(file_2_data)
+    print("Computing the pearson and spearman correlation coeffcients..")
+    pearson_coeff, pearson_p_value = pearsonr(file_1_data, file_2_data)
+    spearman_coeff, spearman_p_value = spearmanr(file_1_data, file_2_data)
+
+    print("Pearson correlation coefficient: {}, with 2-sided p-value {}".format(pearson_coeff, pearson_p_value))
+    print("Spearman correlation coefficient: {}, with 2-sided p-value {}".format(spearman_coeff, spearman_p_value))
+
 
 def plot_files(result_files):
     "Plot the results for the list of files in result_files, all on the same chart for easy comparison"
@@ -370,6 +440,7 @@ if __name__ == "__main__":
     parser.add_argument('--hot', action='store_true', help='Whether to encode the neural network in 1 hot or (x, y) format.')
     parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
     parser.add_argument('--q_plot', action='store_true', help='Whether to plot the performance of the q policy periodically. Default = false')
+    parser.add_argument('-correlate', nargs='?', type=str, help='Compute the pearson and spearman correlation coefficients of the provided data files. The files must be present in the results directory.')
 
     args = parser.parse_args()
 
@@ -438,6 +509,10 @@ if __name__ == "__main__":
     max_steps = args.max
     num_runs = args.run
 
+    if args.correlate:
+        data_files = args.correlate.split()
+        compute_correlations(data_files[0], data_files[1])
+        exit("Correlation computation completed!")
 
     #The main experiment loop
     if not args.sweep_neural:
@@ -480,7 +555,7 @@ if __name__ == "__main__":
                 exit("Performance Plotting Completed!")
 
             if args.visualize:
-                do_visualization(num_episodes, max_steps, 1000, all_params[0])
+                do_visualization(num_episodes, max_steps, 100, all_params[0])
                 exit("Visualization Completed!")
 
 

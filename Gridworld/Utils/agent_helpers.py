@@ -101,7 +101,7 @@ def compute_CCA_discrete(model_snapshots):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
     # print('mean_similarity scores')
     # print(mean_similarity_scores)
-    return mean_similarity_scores
+    return mean_similarity_scores, cca_results['neuron_coeffs2']
 
 def compute_CCA_continuous(plot_range, model_snapshots):
     """
@@ -155,7 +155,7 @@ def compute_CCA_continuous(plot_range, model_snapshots):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
     # print('mean_similarity scores')
     # print(mean_similarity_scores)
-    return mean_similarity_scores
+    return mean_similarity_scores, cca_results['neuron_coeffs2']
 
 
 def compute_t_SNE_discrete():
