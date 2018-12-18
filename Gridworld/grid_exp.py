@@ -39,6 +39,7 @@ if platform.system() == 'Darwin':
 else:
     mpl.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 ###### HELPER FUNCTIONS START ##############
 
@@ -172,13 +173,17 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
 
     #Get the last layer representation for each state and visualize using t-SNE
     if is_neural(cur_agent):
-        tsne_results, marker_colours = RL_agent_message(('t-SNE', plot_range))
+        tsne_results, marker_sizes, marker_colours = RL_agent_message(('t-SNE', plot_range))
         #print(tsne_results)
 
         print("Plotting the t-SNE results")
+        #marker_colours = np.array([-5.0, -4.0, -3.0, 0.0])
+        #marker_sizes = [25, 100, 25, 100]
         plt.figure(figsize=(10,10))
-        plt.scatter(tsne_results[:, 0], tsne_results[:, 1], c=marker_colours)
-        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        #plt.scatter([1, 2, 3, 4], [1, 2, 3, 4], s=marker_sizes, c=marker_colours, cmap=cm.jet)
+        plt.scatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), cmap=cm.jet)
+        #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        plt.colorbar()
         plt.show()
 
         if RESULTS_FILE_NAME:
@@ -204,7 +209,7 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
         if args.load_models:
             axes = plt.gca()
             axes.set_ylim([0.0, 1.0])
-            print(mean_similarity_scores)
+            #print(mean_similarity_scores)
             plt.plot(mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
         else:
             plt.axis([0, num_episodes, 0, 1.0])
@@ -318,34 +323,6 @@ def compute_correlations(file_1, file_2):
     Compute the corelation coefficient between the data stored in file1 and
     file 2, and report the associated p-value
     """
-
-    # x = load_data(file_1).data
-    # y = load_data(file_2).data
-    #
-    # x = np.asarray(x)
-    # y = np.asarray(y)
-    # n = len(x)
-    # mx = x.mean()
-    # my = y.mean()
-    # xm, ym = x-mx, y-my
-    # r_num = np.add.reduce(xm * ym)
-    # r_den = np.sqrt(ss(xm) * ss(ym))
-    #
-    # print(r_num)
-    # print(r_den)
-    # r = r_num / r_den
-    #
-    # # Presumably, if abs(r) > 1, then it is only some small artifact of floating
-    # # point arithmetic.
-    # r = max(min(r, 1.0), -1.0)
-    # df = n-2
-    # if abs(r) == 1.0:
-    #     prob = 0.0
-    # else:
-    #     t_squared = r*r * (df / ((1.0 - r) * (1.0 + r)))
-    #     prob = betai(0.5*df, 0.5, df / (df + t_squared))
-    # return r, prob
-
 
     file_1_data = load_data(file_1).data
     file_2_data = load_data(file_2).data
@@ -556,7 +533,7 @@ if __name__ == "__main__":
                 exit("Performance Plotting Completed!")
 
             if args.visualize:
-                do_visualization(num_episodes, max_steps, 100, all_params[0])
+                do_visualization(num_episodes, max_steps, 10, all_params[0])
                 exit("Visualization Completed!")
 
 
