@@ -56,6 +56,7 @@ def compute_CCA_discrete(model_snapshots):
     other models in the snapshot list
     """
 
+    print('Computing the discrete CCA values for the trained network...')
     max_x_val = e_globs.MAX_COLUMN + 1
     max_y_val = e_globs.MAX_ROW + 1
     truncated_trained_model = create_truncated_model(model_snapshots[-1])
@@ -111,6 +112,8 @@ def compute_CCA_continuous(plot_range, model_snapshots):
     snapshot list
     """
 
+    print('Computing the continuous CCA values for the trained network...')
+
     truncated_trained_model = create_truncated_model(model_snapshots[-1])
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
     mean_similarity_scores = []
@@ -161,6 +164,7 @@ def compute_CCA_continuous(plot_range, model_snapshots):
 def compute_t_SNE_discrete():
     "Computes the representations learned in the last hidden layer of the neural network for all states"
 
+    print('Computing the discrete t-sne values for the trained network')
     #Get a truncated modle so that we can grab the predictions of the hidden layer
     truncated_model = create_truncated_model(a_globs.model)
 
@@ -173,17 +177,24 @@ def compute_t_SNE_discrete():
 
     #Compute the last hidden layer state representation for each state
     i = 0
-    states_of_interest = [e_globs.START_STATE, [4, 8]]
+    states_of_interest = [[3, 2], [5, 6], [4, 6], [3, 6]]
     marker_sizes = []
     marker_colours = []
+    marker_styles = []
     for x in range(max_x_val):
         for y in range(max_y_val):
             #State formatters expect a list of states in [row, column] format
             cur_state = [y, x]
             if cur_state in states_of_interest:
-                marker_sizes.append(EMPHASIS_POINT)
+                #marker_sizes.append(EMPHASIS_POINT)
+                marker_styles.append(INTEREST_STATE_MARKER)
+            elif cur_state == e_globs.START_STATE:
+                marker_styles.append(START_STATE_MARKER)
+            elif cur_state == [4, 8]: #The state just before the goal state
+                marker_styles.append(GOAL_STATE_MARKER)
             else:
-                marker_sizes.append(NORMAL_POINT)
+                marker_styles.append(NORMAL_STATE_MARKER)
+            marker_sizes.append(EMPHASIS_POINT)
             cur_state_formatted = format_states([cur_state])
             marker_colours.append(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             hidden_layer_features = truncated_model.predict(cur_state_formatted, batch_size=1)
@@ -213,10 +224,20 @@ def compute_t_SNE_discrete():
     # print(tsne_results.shape)
     #print(tsne_results[:, 0])
 
-    return tsne_results, marker_sizes, marker_colours
+    return tsne_results, marker_sizes, marker_colours, marker_styles
+
+def continuous_goal_check(state):
+    """
+    Return whether the current state is close enough to the goal state to
+    warrant terminating the episode
+    """
+
+    return np.isclose(state[0], cont_e_globs.GOAL_STATE[0], rtol=cont_e_globs.GOAL_STATE_RELATIVE_TOLERANCE, atol=cont_e_globs.GOAL_STATE_ABSOLUTE_TOLERANCE, equal_nan=False) and np.isclose(state[1], cont_e_globs.GOAL_STATE[1], rtol=0.001, atol=0.001, equal_nan=False)
 
 def compute_t_SNE_continuous(plot_range):
     "Compute the values for the current value function across a number of evenly sampled states equal to plot_range^2"
+
+    print('Computing the continuous t-sne values for the trained network')
 
     #Get a truncated modle so that we can grab the predictions of the hidden layer
     truncated_model = create_truncated_model(a_globs.model)
@@ -227,17 +248,25 @@ def compute_t_SNE_continuous(plot_range):
     states_of_interest = [cont_e_globs.START_STATE]
     marker_sizes = []
     marker_colours = []
+    marker_styles = []
     i = 0
     for x in range(plot_range):
         scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
         for y in range(plot_range):
             #State formatters expect a list of states in [row, column] format
             scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
-            cur_state = [scaled_y, scaled_x]
-            if [y, x] in states_of_interest:
-                marker_sizes.append(EMPHASIS_POINT)
+            cur_state = [y, x]
+            if cur_state in states_of_interest:
+                #marker_sizes.append(EMPHASIS_POINT)
+                marker_styles.append(INTEREST_STATE_MARKER)
+            elif cur_state == e_globs.START_STATE:
+                marker_styles.append(START_STATE_MARKER)
+            elif continuous_goal_check(cur_state):
+                marker_styles.append(GOAL_STATE_MARKER)
             else:
-                marker_sizes.append(NORMAL_POINT)
+                marker_styles.append(NORMAL_STATE_MARKER)
+            marker_sizes.append(NORMAL_POINT)
+            cur_state = [scaled_y, scaled_x]
             cur_state_formatted = format_states([cur_state])
             marker_colours.append(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             hidden_layer_features = truncated_model.predict(cur_state_formatted)
@@ -267,11 +296,12 @@ def compute_t_SNE_continuous(plot_range):
     # print(tsne_results.shape)
     #print(tsne_results[:, 0])
 
-    return tsne_results, marker_sizes, marker_colours
+    return tsne_results, marker_sizes, marker_colours, marker_styles
 
 def compute_state_action_values_discrete():
     "Compute the values for the current value function across all of the states"
 
+    print('Computing the discrete state actions values for the trained network...')
     max_x_val = e_globs.MAX_COLUMN + 1
     max_y_val = e_globs.MAX_ROW + 1
 
@@ -319,6 +349,7 @@ def compute_state_action_values_discrete():
 
 def compute_state_action_values_continuous(plot_range):
     "Compute the values for the current value function across a number of evenly sampled states equal to plot_range^2"
+    print("Computing the continuous state action values for the trained network...")
 
     x_values = np.empty((1, plot_range))
     y_values = np.empty((1, plot_range))

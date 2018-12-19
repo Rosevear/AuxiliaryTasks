@@ -7,8 +7,8 @@ EPSILON_MIN = None
 EPSILON_DECAY_RATE = 0.05
 N = None
 
-NUM_NERONS_LAYER_1 = 150
-NUM_NERONS_LAYER_2 = 150
+NUM_NERONS_LAYER_1 = 50
+NUM_NERONS_LAYER_2 = 50
 
 #For Sarsa agent specifically
 TRACE = 0.90
@@ -39,7 +39,7 @@ BUFFER_SAMPLE_BIAS_PROBABILITY = 0.50
 BATCH_SIZE = 1
 
 #How long to wait before updating the target networks
-NUM_STEPS_TO_UPDATE = 1000
+NUM_STEPS_TO_UPDATE = 1
 
 HOT_SUFFIX = 'hot'
 COORD_SUFFIX = 'coord'

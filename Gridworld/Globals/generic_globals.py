@@ -25,3 +25,8 @@ Transition = namedtuple("Transition", ["states", "actions", "reward", "next_stat
 
 NORMAL_POINT = 25
 EMPHASIS_POINT = 100
+
+START_STATE_MARKER = 'D'
+GOAL_STATE_MARKER = '*'
+INTEREST_STATE_MARKER = 's'
+NORMAL_STATE_MARKER = 'o'

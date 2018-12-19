@@ -43,6 +43,24 @@ from matplotlib import cm
 
 ###### HELPER FUNCTIONS START ##############
 
+#NOTE Taken from https://stackoverflow.com/questions/52303660/iterating-markers-in-plots/52303895#52303895, by user ImportanceOfBeingErnest, on December 18th 2018, and modified for the present purpose
+def mscatter(x,y,ax=None, m=None, **kw):
+    import matplotlib.markers as mmarkers
+    if not ax: ax=plt.gca()
+    sc = ax.scatter(x, y, cmap=cm.jet, **kw)
+    if (m is not None) and (len(m)==len(x)):
+        paths = []
+        for marker in m:
+            if isinstance(marker, mmarkers.MarkerStyle):
+                marker_obj = marker
+            else:
+                marker_obj = mmarkers.MarkerStyle(marker)
+            path = marker_obj.get_path().transformed(
+                        marker_obj.get_transform())
+            paths.append(path)
+        sc.set_paths(paths)
+    return sc
+
 #NOTE:  Save and load model taken from https://machinelearningmastery.com/save-load-keras-deep-learning-models/, by Jason Brownlee, on December 13th 2018, and modified to suit the current purpose
 def save_model(models, filename):
     "Save the current model architecture to disk in a in a json format and the weights in HDF5 format."
@@ -173,7 +191,7 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
 
     #Get the last layer representation for each state and visualize using t-SNE
     if is_neural(cur_agent):
-        tsne_results, marker_sizes, marker_colours = RL_agent_message(('t-SNE', plot_range))
+        tsne_results, marker_sizes, marker_colours, marker_styles, = RL_agent_message(('t-SNE', plot_range))
         #print(tsne_results)
 
         print("Plotting the t-SNE results")
@@ -181,9 +199,21 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
         #marker_sizes = [25, 100, 25, 100]
         plt.figure(figsize=(10,10))
         #plt.scatter([1, 2, 3, 4], [1, 2, 3, 4], s=marker_sizes, c=marker_colours, cmap=cm.jet)
-        plt.scatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), cmap=cm.jet)
+        scatter = mscatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), m=np.array(marker_styles))
         #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        plt.colorbar()
+        plt.colorbar(scatter)
+
+        # regular_point = plt.scatter(random(10), random(10), marker=NORMAL_STATE_MARKER)
+        # start_point = plt.scatter(random(10), random(10), marker=START_STATE_MARKER)
+        # end_point  = plt.scatter(random(10), random(10), marker=GOAL_STATE_MARKER)
+        # interest_point  = plt.scatter(random(10), random(10), marker=INTEREST_STATE_MARKER)
+        # plt.legend((regular_point, start_point, end_point, interest_point),
+        #        ('Regular State', 'Starting State', 'Goal State', 'Point of Interest'),
+        #        scatterpoints=1,
+        #        loc='lower left',
+        #        ncol=3,
+        #        fontsize=8)
+
         plt.show()
 
         if RESULTS_FILE_NAME:
@@ -274,7 +304,8 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
     """
 
     if is_neural(cur_agent):
-        agent_string = cur_agent + ' ' + a_globs.OPTIMIZER + ' ' + a_globs.INIT
+        agent_string = "Agent: " + cur_agent + ' Optimizer: ' + a_globs.OPTIMIZER + ' Initialization: ' + a_globs.INIT
+        #print(agent_string)
     else:
         agent_string = cur_agent
 
@@ -290,7 +321,7 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
             with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 results_tuple = Results_tuple("Steps Per Episode Across Time (Offline Evaluation)", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
-                print("Saving results tuple!")
+                print("Saving the Q plot results tuple!")
                 print(results_tuple)
                 pickle.dump(results_tuple, results_file_pickled)
 
@@ -298,14 +329,14 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
             with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
                 results_tuple = Results_tuple("Network Self-Similarity Across Time", agent_string, results, episodes, args.trial_frequency, 'Episode', num_episodes, 'SVCCA Similarity', 1.0)
-                print("Saving results tuple!")
+                print("Saving the SVCCA results tuple!")
                 print(results_tuple)
                 pickle.dump(results_tuple, results_file_pickled)
         else:
             with open(RESULTS_DIR + '{}_pickled'.format(filename), 'w') as results_file_pickled:
                 episodes = [episode for episode in range(num_episodes)]
                 results_tuple = Results_tuple("Steps Per Episode Across Time (Online Evaluation)", agent_string, results, episodes, 1, 'Episode', num_episodes, 'Steps Per Episode', max_steps + 1000)
-                print("Saving results tuple!")
+                print("Saving the online results tuple!")
                 print(results_tuple)
                 pickle.dump(results_tuple, results_file_pickled)
 
@@ -337,23 +368,26 @@ def compute_correlations(file_1, file_2):
     print("Spearman correlation coefficient: {}, with 2-sided p-value {}".format(spearman_coeff, spearman_p_value))
 
 
-def plot_files(result_files):
+def plot_files(result_files, q_plot):
     "Plot the results for the list of files in result_files, all on the same chart for easy comparison"
 
     i = 0
     for result_file in result_files:
+        print("Loading results...")
         cur_results = load_data(result_file)
-        print('Loading Results tuple!')
+        print('Plotting results...')
         print(cur_results)
-        plt.plot(cur_results.x_values, cur_results.data, GRAPH_COLOURS[i], label="AGENT = {}".format(cur_results.agent_type))
+        plt.scatter(cur_results.x_values, cur_results.data, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
         i += 1
 
     plt.ylabel(cur_results.y_label)
     plt.xlabel(cur_results.x_label)
     plt.title(cur_results.plot_title)
-    plt.xticks(np.arange(0, cur_results.x_max_val, cur_results.x_value_frequency))
-    plt.axis([0, cur_results.x_max_val, 0, cur_results.y_max_val])
-    plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+    if q_plot:
+        pass
+        #plt.xticks(np.arange(0, cur_results.x_max_val, cur_results.x_value_frequency + 100))
+    #plt.axis([0, cur_results.x_max_val, 0, cur_results.y_max_val * 10])
+    #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
     plt.show()
 
 def write_to_log(contents, filename=LOG_FILE_NAME):
@@ -529,11 +563,11 @@ if __name__ == "__main__":
 
             #These do not require the main experiment to finish, so we finish early
             if args.plot_files:
-                plot_files(args.plot_files.split())
+                plot_files(args.plot_files.split(), args.q_plot)
                 exit("Performance Plotting Completed!")
 
             if args.visualize:
-                do_visualization(num_episodes, max_steps, 10, all_params[0])
+                do_visualization(num_episodes, max_steps, 1000, all_params[0])
                 exit("Visualization Completed!")
 
 
