@@ -39,6 +39,7 @@ if platform.system() == 'Darwin':
 else:
     mpl.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib import cm
 
 ###### HELPER FUNCTIONS START ##############
@@ -195,25 +196,10 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
         #print(tsne_results)
 
         print("Plotting the t-SNE results")
-        #marker_colours = np.array([-5.0, -4.0, -3.0, 0.0])
-        #marker_sizes = [25, 100, 25, 100]
         plt.figure(figsize=(10,10))
-        #plt.scatter([1, 2, 3, 4], [1, 2, 3, 4], s=marker_sizes, c=marker_colours, cmap=cm.jet)
         scatter = mscatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), m=np.array(marker_styles))
         #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
         plt.colorbar(scatter)
-
-        # regular_point = plt.scatter(random(10), random(10), marker=NORMAL_STATE_MARKER)
-        # start_point = plt.scatter(random(10), random(10), marker=START_STATE_MARKER)
-        # end_point  = plt.scatter(random(10), random(10), marker=GOAL_STATE_MARKER)
-        # interest_point  = plt.scatter(random(10), random(10), marker=INTEREST_STATE_MARKER)
-        # plt.legend((regular_point, start_point, end_point, interest_point),
-        #        ('Regular State', 'Starting State', 'Goal State', 'Point of Interest'),
-        #        scatterpoints=1,
-        #        loc='lower left',
-        #        ncol=3,
-        #        fontsize=8)
-
         plt.show()
 
         if RESULTS_FILE_NAME:
@@ -239,13 +225,11 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
         if args.load_models:
             axes = plt.gca()
             axes.set_ylim([0.0, 1.0])
-            #print(mean_similarity_scores)
             plt.scatter(mean_similarity_scores, episodes, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
         else:
             plt.axis([0, num_episodes, 0, 1.0])
             plt.scatter(mean_similarity_scores, episodes, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
         plt.show()
-
         do_plotting(filename=RESULTS_FILE_NAME + "SVCCA_similarity")
 
         if RESULTS_FILE_NAME:
@@ -363,7 +347,6 @@ def compute_correlations(file_1, file_2):
     print("Computing the pearson and spearman correlation coeffcients..")
     pearson_coeff, pearson_p_value = pearsonr(file_1_data, file_2_data)
     spearman_coeff, spearman_p_value = spearmanr(file_1_data, file_2_data)
-
     print("Pearson correlation coefficient: {}, with 2-sided p-value {}".format(pearson_coeff, pearson_p_value))
     print("Spearman correlation coefficient: {}, with 2-sided p-value {}".format(spearman_coeff, spearman_p_value))
 
@@ -372,17 +355,29 @@ def plot_files(result_files, q_plot):
     "Plot the results for the list of files in result_files, all on the same chart for easy comparison"
 
     i = 0
+    classes = []
+    recs = []
     for result_file in result_files:
         print("Loading results...")
         cur_results = load_data(result_file)
         print('Plotting results...')
         print(cur_results)
-        plt.scatter(cur_results.x_values, cur_results.data, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
+        if q_plot:
+            plt.scatter(cur_results.x_values, cur_results.data, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
+            recs.append(mpatches.Rectangle((0,0), 1, 1, fc=GRAPH_COLOURS[i]))
+            classes.append(cur_results.agent_type)
+        else:
+            plt.plot(cur_results.x_values, cur_results.data, GRAPH_COLOURS[i], label=cur_results.agent_type)
         i += 1
+    if q_plot:
+        plt.legend(recs, classes, loc='lower left')
+    else:
+        plt.legend(loc='upper right')
 
     plt.ylabel(cur_results.y_label)
     plt.xlabel(cur_results.x_label)
     plt.title(cur_results.plot_title)
+    plt.axis([0, num_episodes, 0, max_steps + 1000])
     plt.show()
 
 def write_to_log(contents, filename=LOG_FILE_NAME):

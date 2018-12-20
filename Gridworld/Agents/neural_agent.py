@@ -18,7 +18,7 @@ import copy
 
 from keras.models import Sequential, Model, clone_model
 from keras.layers import Dense, Activation, Input, concatenate
-from keras.initializers import random_uniform, glorot_uniform, he_uniform
+from keras.initializers import random_uniform, glorot_uniform, he_uniform, glorot_normal, he_normal
 from keras.optimizers import RMSprop, Adam, Adagrad, SGD
 from keras.utils import plot_model
 from keras import backend as k
@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 def agent_init():
 
     optimizer_map = {'Adam' : Adam(lr=a_globs.ALPHA), 'RMSprop' : RMSprop(lr=a_globs.ALPHA), 'Adagrad' : Adagrad(lr=a_globs.ALPHA), 'SGD': SGD(lr=a_globs.ALPHA)}
-    initializer_map = {'random' : random_uniform(), 'glorot': glorot_uniform(), 'he': he_uniform()}
+    initializer_map = {'random' : random_uniform(), 'glorot': glorot_normal(), 'he': he_normal()}
 
     a_globs.cur_epsilon = a_globs.EPSILON
 
