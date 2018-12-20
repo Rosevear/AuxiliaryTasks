@@ -24,7 +24,7 @@ Results_tuple = namedtuple("Results_tuple", ["plot_title", "agent_type", "data",
 Transition = namedtuple("Transition", ["states", "actions", "reward", "next_state"])
 
 NORMAL_POINT = 25
-EMPHASIS_POINT = 100
+EMPHASIS_POINT = 400
 
 START_STATE_MARKER = 'D'
 GOAL_STATE_MARKER = '*'

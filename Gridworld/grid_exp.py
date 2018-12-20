@@ -117,8 +117,8 @@ def setup_plot(x_tick_size=None, plot_title=None):
     plt.xlabel("Episode")
     plt.title(plot_title)
 
-    if x_tick_size:
-        plt.xticks(np.arange(0, num_episodes + 1, x_tick_size))
+    # if x_tick_size:
+    #     plt.xticks(np.arange(0, num_episodes + 1, x_tick_size))
 
     plt.axis([0, num_episodes, 0, max_steps + 1000])
     plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
@@ -240,10 +240,10 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
             axes = plt.gca()
             axes.set_ylim([0.0, 1.0])
             #print(mean_similarity_scores)
-            plt.plot(mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+            plt.scatter(mean_similarity_scores, episodes, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
         else:
             plt.axis([0, num_episodes, 0, 1.0])
-            plt.plot(episodes, mean_similarity_scores, GRAPH_COLOURS[0], label="Test")
+            plt.scatter(mean_similarity_scores, episodes, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
         plt.show()
 
         do_plotting(filename=RESULTS_FILE_NAME + "SVCCA_similarity")
@@ -259,24 +259,24 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
             plt.show()
 
         #Do t-sne on the SVCCA representation of the layer
-        tsne = TSNE(n_components=2, verbose=1)
-        tsne_results = tsne.fit_transform(neurons)
+        # tsne = TSNE(n_components=2, verbose=1)
+        # tsne_results = tsne.fit_transform(neurons)
+        #
+        # print("Plotting the t-SNE SVCCA preprocessed results")
+        # plt.figure(figsize=(10,10))
+        # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
+        # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+        # plt.show()
 
-        print("Plotting the t-SNE SVCCA preprocessed results")
-        plt.figure(figsize=(10,10))
-        plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-        plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        plt.show()
-
-        if RESULTS_FILE_NAME:
-            print("Saving the results...")
-            if suffix:
-                plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-            else:
-                plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-        else:
-            print("Displaying the t-SNE-SVCCA results...")
-            plt.show()
+        # if RESULTS_FILE_NAME:
+        #     print("Saving the results...")
+        #     if suffix:
+        #         plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+        #     else:
+        #         plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+        # else:
+        #     print("Displaying the t-SNE-SVCCA results...")
+        #     plt.show()
 
 #NOTE: Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
@@ -383,11 +383,6 @@ def plot_files(result_files, q_plot):
     plt.ylabel(cur_results.y_label)
     plt.xlabel(cur_results.x_label)
     plt.title(cur_results.plot_title)
-    if q_plot:
-        pass
-        #plt.xticks(np.arange(0, cur_results.x_max_val, cur_results.x_value_frequency + 100))
-    #plt.axis([0, cur_results.x_max_val, 0, cur_results.y_max_val * 10])
-    #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
     plt.show()
 
 def write_to_log(contents, filename=LOG_FILE_NAME):
@@ -567,9 +562,8 @@ if __name__ == "__main__":
                 exit("Performance Plotting Completed!")
 
             if args.visualize:
-                do_visualization(num_episodes, max_steps, 1000, all_params[0])
+                do_visualization(num_episodes, max_steps, 10, all_params[0])
                 exit("Visualization Completed!")
-
 
             cur_param_results = []
             cur_Q_param_results = []
@@ -753,6 +747,9 @@ if __name__ == "__main__":
             file_name_suffix += 1
 
     elif not args.sweep_neural:
+        if args.save_model:
+            save_model([a_globs.model], RESULTS_FILE_NAME)
+
         #Average the results over all of the runs for the single parameters setting provided
         avg_results = []
         for i in range(len(all_results)):

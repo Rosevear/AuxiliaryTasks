@@ -249,6 +249,7 @@ def compute_t_SNE_continuous(plot_range):
     marker_sizes = []
     marker_colours = []
     marker_styles = []
+    states = []
     i = 0
     for x in range(plot_range):
         scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
@@ -259,15 +260,27 @@ def compute_t_SNE_continuous(plot_range):
             if cur_state in states_of_interest:
                 #marker_sizes.append(EMPHASIS_POINT)
                 marker_styles.append(INTEREST_STATE_MARKER)
+                cur_state = [scaled_y, scaled_x]
+                marker_sizes.append(EMPHASIS_POINT)
             elif cur_state == e_globs.START_STATE:
                 marker_styles.append(START_STATE_MARKER)
+                cur_state = [scaled_y, scaled_x]
+                marker_sizes.append(EMPHASIS_POINT)
             elif continuous_goal_check(cur_state):
+                #The foal state is never actually visited, so there are no
+                #state actio nvalues for it that have been updated, so it will be negative
+                #Thus, we use a state close to the goal state instead
+                cur_state[0] = 0.99
+                cur_state[1] = 0.99
                 marker_styles.append(GOAL_STATE_MARKER)
+                marker_sizes.append(EMPHASIS_POINT)
             else:
                 marker_styles.append(NORMAL_STATE_MARKER)
-            marker_sizes.append(NORMAL_POINT)
-            cur_state = [scaled_y, scaled_x]
+                marker_sizes.append(NORMAL_POINT)
+                cur_state = [scaled_y, scaled_x]
             cur_state_formatted = format_states([cur_state])
+            #print(cur_state_formatted)
+            #print(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             marker_colours.append(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             hidden_layer_features = truncated_model.predict(cur_state_formatted)
             state_network_representations[i] = hidden_layer_features
@@ -368,16 +381,19 @@ def compute_state_action_values_continuous(plot_range):
         for y in range(plot_range):
             scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]
+            #cur_state = [y, x]
             if a_globs.AGENT == a_globs.RANDOM:
                 pass
             elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
                 best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
+                #print(cur_state_formatted)
                 if a_globs.AGENT == a_globs.NEURAL:
                     best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
                 else:
                     best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1)[0][0])
+                #print(best_action_val)
 
             #x_values.append(x)
             #print('y value shape')
