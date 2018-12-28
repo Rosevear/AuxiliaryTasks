@@ -1,11 +1,11 @@
 # Copyright 2016 Google Inc.
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -263,8 +263,8 @@ def get_cca_similarity(acts1, acts2, threshold=0.98, compute_dirns=True,
   # assert dimensionality equal
   assert acts1.shape[1] == acts2.shape[1], "dimensions don't match"
   # check that acts1, acts2 are transposition
-  assert acts1.shape[0] < acts1.shape[1], ("input must be number of neurons"
-                                           "by datapoints")
+  #assert acts1.shape[0] < acts1.shape[1], ("input must be number of neurons"
+    #                                       "by datapoints")
   return_dict = {}
 
   # compute covariance with numpy function for extra stability

@@ -303,10 +303,12 @@ def agent_message(in_message):
         if a_globs.ENV == CONTINUOUS:
             plot_range = in_message[1]
             model_snapshots = in_message[2]
-            return compute_CCA_continuous(plot_range, model_snapshots)
+            diff_network = in_message[4]
+            return compute_CCA_continuous(plot_range, model_snapshots, diff_network)
         else:
             model_snapshots = in_message[2]
-            return compute_CCA_discrete(model_snapshots)
+            diff_network = in_message[4]
+            return compute_CCA_discrete(model_snapshots, diff_network)
 
     elif in_message[0] == 'GET_SNAPSHOT':
         cur_snapshot = clone_model(a_globs.model)

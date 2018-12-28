@@ -34,22 +34,42 @@ def create_truncated_model(trained_model):
 
     optimizer_map = {'Adam' : Adam(lr=a_globs.ALPHA), 'RMSprop' : RMSprop(lr=a_globs.ALPHA), 'Adagrad' : Adagrad(lr=a_globs.ALPHA), 'SGD': SGD(lr=a_globs.ALPHA)}
 
+    #print(trained_model.layers[1].input_shape)
+
     if a_globs.AGENT == a_globs.NEURAL:
         model = Sequential()
-        model.add(Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
-        model.add(Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu'))
+        print(trained_model.layers[1].input_shape[1])
+        model.add(Dense(trained_model.layers[1].input_shape[1], activation='relu', input_shape=(a_globs.FEATURE_VECTOR_SIZE,)))
+        model.add(Dense(trained_model.layers[2].input_shape[1], activation='relu'))
     else:
         main_input = Input(shape=(a_globs.FEATURE_VECTOR_SIZE,))
         shared_1 = Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', name='shared_1')(main_input)
         main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', name='main_task_full_layer')(shared_1)
         model = Model(inputs=main_input, outputs=main_task_full_layer)
+    #print('truncated layers')
+    #print(model.layers)
+
+    #print('non truncated layers')
+    #print(trained_model.layers)
 
     model.compile(loss='mse', optimizer=optimizer_map[a_globs.OPTIMIZER])
     for i, layer in enumerate(model.layers):
+        print('layer')
+        print(i)
+        print('trained model input')
+        print(trained_model.layers[i].input_shape)
+        print('trained odle output')
+        print(trained_model.layers[i].output_shape)
+
+        print('model shape input')
+        print(model.layers[i].input_shape)
+        print('model output shape')
+        print(model.layers[i].output_shape)
+
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
 
-def compute_CCA_discrete(model_snapshots):
+def compute_CCA_discrete(model_snapshots, diff_network):
     """
     Compute the CCA similarity for the network's final layer across all states
     between the last for the snapshot at the end of model_snapshots with all the
@@ -63,9 +83,16 @@ def compute_CCA_discrete(model_snapshots):
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
 
     mean_similarity_scores = []
+    #For differet networks we only want the similarity score between the tow different networks,
+    #and not how similar the last network in the model snapshots is to itself
+    if diff_network: #NOTE: set the feature vector appropriate from the command line!
+        print('Popping last snapshot for diff network setting!')
+        model_snapshots.pop()
+
     for model in model_snapshots:
         cur_truncated_model = create_truncated_model(model)
-        cur_layer_representations = np.empty((hidden_layer_feature_shape[1], max_x_val * max_y_val))
+        cur_layer_representation_shape = cur_truncated_model.predict(format_states([[0, 0]])).shape
+        cur_layer_representations = np.empty((cur_layer_representation_shape[1], max_x_val * max_y_val))
         trained_layer_representations = np.empty((hidden_layer_feature_shape[1], max_x_val * max_y_val))
 
         #Compute the last hidden layer state representation for each state
@@ -104,7 +131,7 @@ def compute_CCA_discrete(model_snapshots):
     # print(mean_similarity_scores)
     return mean_similarity_scores, cca_results['neuron_coeffs2']
 
-def compute_CCA_continuous(plot_range, model_snapshots):
+def compute_CCA_continuous(plot_range, model_snapshots, diff_network):
     """
     Compute the CCA similarity for the network's final layer across across a
     number of evenly sampled states equal to plot_range^2 between the last for
@@ -117,6 +144,13 @@ def compute_CCA_continuous(plot_range, model_snapshots):
     truncated_trained_model = create_truncated_model(model_snapshots[-1])
     hidden_layer_feature_shape = truncated_trained_model.predict(format_states([[0, 0]])).shape
     mean_similarity_scores = []
+
+    #For differet networks we only want the similarity score between the tow different networks,
+    #and not how similar the last network in the model snapshots is to itself
+    if diff_network: #NOTE: set the feature vector appropriate from the command line!
+        print('Popping last snapshot for diff network setting!')
+        model_snapshots.pop()
+
     for model in model_snapshots:
         cur_truncated_model = create_truncated_model(model)
         cur_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
@@ -130,8 +164,8 @@ def compute_CCA_continuous(plot_range, model_snapshots):
                 scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
                 #State formatters expect a list of states in [row, column] format
                 cur_state = [y, x]
-                cur_state_formatted = format_states([cur_state])
-                cur_layer_features = cur_truncated_model.predict(cur_state_formatted)
+                cur_layer_representation_shape = cur_truncated_model.predict(format_states([[0, 0]])).shape
+                cur_layer_representations = np.empty((cur_layer_representation_shape[1], max_x_val * max_y_val))
                 trained_layer_features = truncated_trained_model.predict(cur_state_formatted)
                 cur_layer_representations[:, i] = cur_layer_features
                 trained_layer_representations[:, i] = trained_layer_features

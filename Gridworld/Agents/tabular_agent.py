@@ -31,7 +31,7 @@ def agent_start(state):
 
     a_globs.cur_state = state
 
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         a_globs.cur_action = get_max_action_tabular(a_globs.cur_state)
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
@@ -42,14 +42,15 @@ def agent_step(reward, state):
     next_state = state
 
     #Choose the next action, epsilon greedy style
-    if rand_un() < 1 - a_globs.cur_epsilon:
+    if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         next_action = get_max_action_tabular(next_state)
     else:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
     #Update the state action values
-    next_state_max_action = a_globs.state_action_values[next_state[0]][next_state[1]].index(max(a_globs.state_action_values[next_state[0]][next_state[1]]))
-    a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward + a_globs.GAMMA * a_globs.state_action_values[next_state[0]][next_state[1]][next_state_max_action] - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
+    if not a_globs.is_trial_episode:
+        next_state_max_action = a_globs.state_action_values[next_state[0]][next_state[1]].index(max(a_globs.state_action_values[next_state[0]][next_state[1]]))
+        a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward + a_globs.GAMMA * a_globs.state_action_values[next_state[0]][next_state[1]][next_state_max_action] - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
 
     a_globs.cur_state = next_state
     a_globs.cur_action = next_action
@@ -57,7 +58,8 @@ def agent_step(reward, state):
 
 def agent_end(reward):
 
-    a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
+    if not a_globs.is_trial_episode:
+        a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action] += a_globs.ALPHA * (reward - a_globs.state_action_values[a_globs.cur_state[0]][a_globs.cur_state[1]][a_globs.cur_action])
 
     return
 

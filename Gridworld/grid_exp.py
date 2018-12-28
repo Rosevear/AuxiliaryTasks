@@ -135,7 +135,7 @@ def do_plotting(suffix=0, filename=None):
         print("Displaying the results...")
         plt.show()
 
-def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
+def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0, diff_network=False):
     "Create a 3D plot of plot_range samples of the agent's current value function across the state space for a single run of length num_episodes"
 
     cur_agent = setting[0]
@@ -169,51 +169,59 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
     #Perform all the visualization computation and plotting
     #Get the values for the value function
     #print(a_globs.model)
-    (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
+    #print(is_similarity)
+    if not diff_network:
+        #print('No!')
+        (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
 
-    print("Plotting the 3D value function plot")
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_title('{} Agent Value Function'.format(cur_agent));
-    ax.set_xlabel('Column position')
-    ax.set_ylabel('Row position')
-    ax.set_zlabel('Value')
-    ax.plot_wireframe(x_values, y_values, plot_values)
-
-    if RESULTS_FILE_NAME:
-        print("Saving the results...")
-        if suffix:
-            plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-        else:
-            plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-    else:
-        print("Displaying the value function results results...")
-        plt.show()
-
-    #Get the last layer representation for each state and visualize using t-SNE
-    if is_neural(cur_agent):
-        tsne_results, marker_sizes, marker_colours, marker_styles, = RL_agent_message(('t-SNE', plot_range))
-        #print(tsne_results)
-
-        print("Plotting the t-SNE results")
-        plt.figure(figsize=(10,10))
-        scatter = mscatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), m=np.array(marker_styles))
-        #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        plt.colorbar(scatter)
-        plt.show()
+        print("Plotting the 3D value function plot")
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_title('{} Agent Value Function'.format(cur_agent));
+        ax.set_xlabel('Column position')
+        ax.set_ylabel('Row position')
+        ax.set_zlabel('Value')
+        ax.plot_wireframe(x_values, y_values, plot_values)
 
         if RESULTS_FILE_NAME:
             print("Saving the results...")
             if suffix:
-                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
             else:
-                plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+                plt.savefig("{} {} value function plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
         else:
-            print("Displaying the t-SNE results...")
+            print("Displaying the value function results results...")
             plt.show()
 
+    #Get the last layer representation for each state and visualize using t-SNE
+    if is_neural(cur_agent):
+        if not diff_network:
+            tsne_results, marker_sizes, marker_colours, marker_styles, = RL_agent_message(('t-SNE', plot_range))
+            #print(tsne_results)
+
+            print("Plotting the t-SNE results")
+            plt.figure(figsize=(10,10))
+            scatter = mscatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), m=np.array(marker_styles))
+            #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
+            plt.colorbar(scatter)
+            plt.show()
+
+            if RESULTS_FILE_NAME:
+                print("Saving the results...")
+                if suffix:
+                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
+                else:
+                    plt.savefig("{} {} t-SNE plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
+            else:
+                print("Displaying the t-SNE results...")
+                plt.show()
+
         #Get the SVCCA similarity score
-        mean_similarity_scores, neurons = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS))
+        mean_similarity_scores, neurons = RL_agent_message(('CCA', plot_range, MODEL_SNAPSHOTS, args, args.diff_network))
+        if diff_network:
+            print('Mean similarity Scores')
+            print(mean_similarity_scores)
+            exit("Similarity computed! TErminating program...")
         save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity', visualize=True)
         episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
 
@@ -241,26 +249,6 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0):
         else:
             print("Displaying the SVCCA results...")
             plt.show()
-
-        #Do t-sne on the SVCCA representation of the layer
-        # tsne = TSNE(n_components=2, verbose=1)
-        # tsne_results = tsne.fit_transform(neurons)
-        #
-        # print("Plotting the t-SNE SVCCA preprocessed results")
-        # plt.figure(figsize=(10,10))
-        # plt.scatter(tsne_results[:, 0], tsne_results[:, 1])
-        # plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
-        # plt.show()
-
-        # if RESULTS_FILE_NAME:
-        #     print("Saving the results...")
-        #     if suffix:
-        #         plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME + str(suffix), cur_agent), format="png")
-        #     else:
-        #         plt.savefig("{} {} t-SNE-SVCCA plot.png".format(RESULTS_FILE_NAME, cur_agent), format="png")
-        # else:
-        #     print("Displaying the t-SNE-SVCCA results...")
-        #     plt.show()
 
 #NOTE: Taken from https://stackoverflow.com/questions/38987/how-to-merge-two-dictionaries-in-a-single-expression on September 22nd 2018
 def merge_two_dicts(x, y):
@@ -351,7 +339,7 @@ def compute_correlations(file_1, file_2):
     print("Spearman correlation coefficient: {}, with 2-sided p-value {}".format(spearman_coeff, spearman_p_value))
 
 
-def plot_files(result_files, q_plot):
+def plot_files(result_files, q_plot, is_similarity):
     "Plot the results for the list of files in result_files, all on the same chart for easy comparison"
 
     i = 0
@@ -362,6 +350,8 @@ def plot_files(result_files, q_plot):
         cur_results = load_data(result_file)
         print('Plotting results...')
         print(cur_results)
+        print('Num results')
+        print(len(cur_results.data))
         if q_plot:
             plt.scatter(cur_results.x_values, cur_results.data, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
             recs.append(mpatches.Rectangle((0,0), 1, 1, fc=GRAPH_COLOURS[i]))
@@ -369,15 +359,20 @@ def plot_files(result_files, q_plot):
         else:
             plt.plot(cur_results.x_values, cur_results.data, GRAPH_COLOURS[i], label=cur_results.agent_type)
         i += 1
-    if q_plot:
-        plt.legend(recs, classes, loc='lower left')
+    if q_plot and is_similarity:
+        plt.legend(recs, classes, loc='lower right')
+    elif q_plot:
+        plt.legend(recs, classes, loc='upper right')
     else:
         plt.legend(loc='upper right')
 
     plt.ylabel(cur_results.y_label)
     plt.xlabel(cur_results.x_label)
     plt.title(cur_results.plot_title)
-    plt.axis([0, num_episodes, 0, max_steps + 1000])
+    if q_plot and is_similarity:
+        plt.axis([0, num_episodes, 0, 1.0])
+    else:
+        plt.axis([0, num_episodes, 0, max_steps + 1000])
     plt.show()
 
 def write_to_log(contents, filename=LOG_FILE_NAME):
@@ -443,6 +438,8 @@ if __name__ == "__main__":
     parser.add_argument('--visualize', action='store_true', help='Whether to plot the value function, t-SNE, and CCA visualizations for each agent. Default = false')
     parser.add_argument('--q_plot', action='store_true', help='Whether to plot the performance of the q policy periodically. Default = false')
     parser.add_argument('-correlate', nargs='?', type=str, help='Compute the pearson and spearman correlation coefficients of the provided data files. The files must be present in the results directory.')
+    parser.add_argument('--similarity', action='store_true', help='Whether or not to plot with a scale from 0 to 1.0, for use with the similarity measure.')
+    parser.add_argument('--diff_network', action='store_true', help='Whether or not the layers being computed for SVCCA are from the same network')
 
     args = parser.parse_args()
 
@@ -553,11 +550,12 @@ if __name__ == "__main__":
 
             #These do not require the main experiment to finish, so we finish early
             if args.plot_files:
-                plot_files(args.plot_files.split(), args.q_plot)
+                plot_files(args.plot_files.split(), args.q_plot, args.similarity)
                 exit("Performance Plotting Completed!")
 
             if args.visualize:
-                do_visualization(num_episodes, max_steps, 10, all_params[0])
+                #print(args.similarity)
+                do_visualization(num_episodes, max_steps, 100, all_params[0], diff_network=args.diff_network)
                 exit("Visualization Completed!")
 
             cur_param_results = []
@@ -589,9 +587,9 @@ if __name__ == "__main__":
                     #print(run_results)
 
                     #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                    if args.q_plot and is_neural(cur_agent) and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
+                    if args.q_plot and (is_neural(cur_agent) or cur_agent == 'tabular') and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                         print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
-                        old_weights = a_globs.model.get_weights()
+                        #old_weights = a_globs.model.get_weights()
                         a_globs.is_trial_episode = True
                         RL_episode(max_steps)
                         # print('offline results')
@@ -599,7 +597,7 @@ if __name__ == "__main__":
                         Q_run_results.append(RL_num_steps())
                         RL_cleanup()
                         a_globs.is_trial_episode = False
-                        a_globs.model.set_weights(old_weights)
+                        #a_globs.model.set_weights(old_weights)
                         # print(RL_num_steps())
                         # print(Q_run_results)
 
