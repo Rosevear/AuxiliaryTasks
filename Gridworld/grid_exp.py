@@ -222,6 +222,7 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0, dif
             print('Mean similarity Scores')
             print(mean_similarity_scores)
             exit("Similarity computed! TErminating program...")
+        print(mean_similarity_scores)
         save_results(mean_similarity_scores, cur_agent, RESULTS_FILE_NAME + 'SVCCA_similarity', visualize=True)
         episodes = [episode for episode in range(0, num_episodes + 1, args.trial_frequency)]
 

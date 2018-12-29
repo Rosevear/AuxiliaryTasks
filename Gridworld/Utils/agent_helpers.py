@@ -153,7 +153,8 @@ def compute_CCA_continuous(plot_range, model_snapshots, diff_network):
 
     for model in model_snapshots:
         cur_truncated_model = create_truncated_model(model)
-        cur_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
+        cur_layer_representation_shape = cur_truncated_model.predict(format_states([[0, 0]])).shape
+        cur_layer_representations = np.empty((cur_layer_representation_shape[1], plot_range ** 2))
         trained_layer_representations = np.empty((hidden_layer_feature_shape[1], plot_range ** 2))
 
         #Compute the last hidden layer state representation for each state
@@ -164,13 +165,17 @@ def compute_CCA_continuous(plot_range, model_snapshots, diff_network):
                 scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
                 #State formatters expect a list of states in [row, column] format
                 cur_state = [y, x]
-                cur_layer_representation_shape = cur_truncated_model.predict(format_states([[0, 0]])).shape
+                cur_state_formatted = format_states([cur_state])
                 cur_layer_features = cur_truncated_model.predict(cur_state_formatted)
                 trained_layer_features = truncated_trained_model.predict(cur_state_formatted)
                 cur_layer_representations[:, i] = cur_layer_features
                 trained_layer_representations[:, i] = trained_layer_features
                 i += 1
 
+        print('cur layer reps')
+        print(cur_layer_representations)
+        print('trained reps')
+        print(trained_layer_representations)
         #print(cur_layer_representations.shape)
         cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
         # print(cca_results)
