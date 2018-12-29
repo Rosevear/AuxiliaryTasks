@@ -165,7 +165,7 @@ def compute_CCA_continuous(plot_range, model_snapshots, diff_network):
                 #State formatters expect a list of states in [row, column] format
                 cur_state = [y, x]
                 cur_layer_representation_shape = cur_truncated_model.predict(format_states([[0, 0]])).shape
-                cur_layer_representations = np.empty((cur_layer_representation_shape[1], max_x_val * max_y_val))
+                cur_layer_features = cur_truncated_model.predict(cur_state_formatted)
                 trained_layer_features = truncated_trained_model.predict(cur_state_formatted)
                 cur_layer_representations[:, i] = cur_layer_features
                 trained_layer_representations[:, i] = trained_layer_features
