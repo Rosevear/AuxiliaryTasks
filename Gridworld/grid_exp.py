@@ -402,7 +402,7 @@ def send_params(cur_agent, param_setting):
 #AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
 #AGENTS = []
-AGENTS = ['neural']
+AGENTS = ['sarsa_lambda']
 #Use args.trial frequency to determine snapshot points instead
 #CCA_SNAPSHOT_POINTS = [0, 25, 50, 75, 100, 125] #The episodes during a run for which a snapshot of the model should be taken for SVCCA analysis
 MODEL_SNAPSHOTS = []
@@ -588,7 +588,7 @@ if __name__ == "__main__":
                     #print(run_results)
 
                     #Run a test trial without learning or exploration to test the off-policy learned by the agent
-                    if args.q_plot and (is_neural(cur_agent) or cur_agent == 'tabular') and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
+                    if args.q_plot and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                         print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
                         #old_weights = a_globs.model.get_weights()
                         a_globs.is_trial_episode = True
