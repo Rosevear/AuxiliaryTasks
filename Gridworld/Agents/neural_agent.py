@@ -171,7 +171,6 @@ def agent_cleanup():
 def agent_message(in_message):
     "Retrieves the parameters from grid_exp.py, sent via the RL glue interface"
 
-    #print(in_message)
     if in_message[0] == 'PLOT':
         if a_globs.ENV == CONTINUOUS:
             plot_range = in_message[1]
