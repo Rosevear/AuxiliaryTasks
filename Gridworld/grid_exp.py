@@ -342,9 +342,6 @@ def plot_files(result_files, q_plot, is_similarity):
         print("Loading results...")
         cur_results = load_data(result_file)
         print('Plotting results...')
-        print(cur_results)
-        print('Num results')
-        print(len(cur_results.data))
         if q_plot:
             plt.scatter(cur_results.x_values, cur_results.data, s=NORMAL_POINT, c=GRAPH_COLOURS[i])
             recs.append(mpatches.Rectangle((0,0), 1, 1, fc=GRAPH_COLOURS[i]))
@@ -397,9 +394,6 @@ MODEL_SNAPSHOTS = []
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Solves the gridworld maze problem of navigating from the start state to the goal sate for the provided gridworld envionrment')
-    #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
-    #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
-    #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
     parser.add_argument('-plot_files', nargs='?', type=str, help='The file names of results files to load and plot. The files must be present in the Results directory.')
     parser.add_argument('--save_model', action='store_true', help='Whether to save the model snapshots trained for the current run of the program.')
     parser.add_argument('-load_models', nargs='?', type=str, help='The file names of a pre-trained model snapshots to load for visualization.')
