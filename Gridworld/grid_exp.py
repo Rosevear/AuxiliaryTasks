@@ -168,10 +168,7 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0, dif
 
     #Perform all the visualization computation and plotting
     #Get the values for the value function
-    #print(a_globs.model)
-    #print(is_similarity)
     if not diff_network:
-        #print('No!')
         (x_values, y_values, plot_values) = RL_agent_message(('PLOT', plot_range))
 
         print("Plotting the 3D value function plot")
@@ -197,12 +194,10 @@ def do_visualization(num_episodes, max_steps, plot_range, setting, suffix=0, dif
     if is_neural(cur_agent):
         if not diff_network:
             tsne_results, marker_sizes, marker_colours, marker_styles, = RL_agent_message(('t-SNE', plot_range))
-            #print(tsne_results)
 
             print("Plotting the t-SNE results")
             plt.figure(figsize=(10,10))
             scatter = mscatter(tsne_results[:, 0], tsne_results[:, 1], s=np.array(marker_sizes), c=np.array(marker_colours), m=np.array(marker_styles))
-            #plt.legend(loc='center', bbox_to_anchor=(0.50, 0.90))
             plt.colorbar(scatter)
             plt.show()
 
@@ -278,7 +273,6 @@ def save_results(results, cur_agent, filename='Default File Name', q_plot=False,
 
     if is_neural(cur_agent):
         agent_string = "Agent: " + cur_agent + ' Optimizer: ' + a_globs.OPTIMIZER + ' Initialization: ' + a_globs.INIT
-        #print(agent_string)
     else:
         agent_string = cur_agent
 
@@ -331,8 +325,6 @@ def compute_correlations(file_1, file_2):
     file_1_data = load_data(file_1).data
     file_2_data = load_data(file_2).data
 
-    #print(file_1_data)
-    #print(file_2_data)
     print("Computing the pearson and spearman correlation coeffcients..")
     pearson_coeff, pearson_p_value = pearsonr(file_1_data, file_2_data)
     spearman_coeff, spearman_p_value = spearmanr(file_1_data, file_2_data)
@@ -386,7 +378,6 @@ def write_to_log(contents, filename=LOG_FILE_NAME):
 def send_params(cur_agent, param_setting):
     "Send the specified agent and environment parameters to be used in the current run"
 
-    #print(param_setting)
     if cur_agent in AUX_AGENTS:
         agent_params = {"EPSILON": EPSILON, "AGENT": param_setting[0], "ALPHA": param_setting[1], "GAMMA": param_setting[2], "N": param_setting[3], "LAMBDA": param_setting[4], "IS_STOCHASTIC": IS_STOCHASTIC, "IS_1_HOT": IS_1_HOT, "ENV": args.env}
     elif cur_agent == a_globs.NEURAL and args.sweep_neural:
@@ -399,17 +390,13 @@ def send_params(cur_agent, param_setting):
 
 ###### HELPER FUNCTIONS END #################
 
-#AUX_AGENTS = [', 'state', 'redundant', 'noise']
 AUX_AGENTS = []
-#AGENTS = []
 AGENTS = ['sarsa_lambda']
-#Use args.trial frequency to determine snapshot points instead
-#CCA_SNAPSHOT_POINTS = [0, 25, 50, 75, 100, 125] #The episodes during a run for which a snapshot of the model should be taken for SVCCA analysis
 MODEL_SNAPSHOTS = []
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Solves the gridworld maze problem, as described in Sutton & Barto, 2018')
+    parser = argparse.ArgumentParser(description='Solves the gridworld maze problem of navigating from the start state to the goal sate for the provided gridworld envionrment')
     #parser.add_argument('-update_frequency', nargs='?', type=int, default=1000, help='The number of time steps to wait before upddating the target network used by neural network agents. The default is update = 1000')
     #parser.add_argument('-batch_size', nargs='?', type=int, default=10, help='The batch size used when sampling from the experience replay buffer with neural network agents. The default is batch = 10')
     #parser.add_argument('-buffer_size', nargs='?', type=int, default=1000, help='The size of the buffer used in experience replay for neural network agents. The default is buffer_size = 1000')
@@ -472,10 +459,6 @@ if __name__ == "__main__":
         trace_params = [0.90]
         replay_context_sizes = [1]
 
-        #alpha_params = [1, 0.1]
-        #lambda_params = sample_params_log_uniform(0.001, 1, 6)
-        #lambda_params = [1]
-
         print('Sweeping alpha parameters: {}'.format(str(alpha_params)))
         print('Sweeping lambda parameters: {}'.format(str(lambda_params)))
 
@@ -485,10 +468,6 @@ if __name__ == "__main__":
         alpha_params = [0.001, 0.005, 0.0075, 0.01, 0.05, 0.1, 0.15, 0.25]
         buffer_size_params = [100, 1000, 10000]
         update_freq_params = [1000]
-
-        #alpha_params = [0.001, 0.005]
-        #buffer_size_params = [10000]
-
         sweeped_pairs = [(0.001, 100), (0.001, 1000)]
 
     else:
@@ -573,34 +552,21 @@ if __name__ == "__main__":
                 Q_run_results = []
                 print("Run number: {}".format(str(run)))
                 RL_init()
-                #online_model = clone_model(a_globs.model)
+
                 for episode in range(num_episodes):
                     print("Episode number: {}".format(str(episode)))
-                    # print('num steps prior to episode start')
-                    # print(RL_num_steps())
                     RL_episode(max_steps)
-                    # print('online results')
-                    # print(run_results)
-                    # print('num steps after episode')
-                    # print(RL_num_steps())
                     run_results.append(RL_num_steps())
                     RL_cleanup()
-                    #print(run_results)
 
                     #Run a test trial without learning or exploration to test the off-policy learned by the agent
                     if args.q_plot and (episode % args.trial_frequency == 0 or episode == num_episodes - 1):
                         print("Running a trial episode to test the Q-policy at episode: {} of run {} for agent: {}".format(episode, run, cur_agent))
-                        #old_weights = a_globs.model.get_weights()
                         a_globs.is_trial_episode = True
                         RL_episode(max_steps)
-                        # print('offline results')
-                        # print(Q_run_results)
                         Q_run_results.append(RL_num_steps())
                         RL_cleanup()
                         a_globs.is_trial_episode = False
-                        #a_globs.model.set_weights(old_weights)
-                        # print(RL_num_steps())
-                        # print(Q_run_results)
 
                 cur_param_results.append(run_results)
                 cur_Q_param_results.append(Q_run_results)
@@ -614,12 +580,8 @@ if __name__ == "__main__":
                 cur_agent = all_param_settings[i][0]
                 if not is_neural(cur_agent):
                     exit('ERROR: The current agent is not a  neural network, but you are attempting to sweep it! Please ensure that the agent set up in grid_exp.py is a neural network!')
-                #print(all_results)
                 cur_data = [np.mean(run) for run in zip(*all_results[i])]
                 episodes = [episode for episode in range(num_episodes)]
-
-                #print(episodes)
-                #print(cur_data)
 
                 save_results(cur_data, cur_agent, RESULTS_FILE_NAME + str(i))
 
@@ -639,10 +601,6 @@ if __name__ == "__main__":
                 save_results(cur_data, cur_agent, RESULTS_FILE_NAME + "Q_results" + str(i), q_plot=True)
 
                 plt.figure()
-                #print(episodes)
-                #print(cur_data)
-                #cur_data = [1100, 1500, 2000]
-                #print(all_Q_param_settings)
                 plt.plot(episodes, cur_data, GRAPH_COLOURS[0], label="Agent = {}  Alpha = {} Buffer_size = {}, Update_freq = {}".format(cur_agent, str(all_Q_param_settings[i][1]), str(all_Q_param_settings[i][3]), str(all_Q_param_settings[i][4])))
                 setup_plot(args.trial_frequency, 'Off Policy Results')
                 do_plotting(i, RESULTS_FILE_NAME + "Q_results")
@@ -650,7 +608,6 @@ if __name__ == "__main__":
                 i += 1
         else:
             log_contents = "Skipping agent: {} with alpha = {} gamma = {} buffer_size = {}, update_freq = {}".format(param_setting[0], param_setting[1], param_setting[2], param_setting[3], param_setting[4])
-            print(log_contents)
             write_to_log(log_contents)
 
     #Process and plot the results of a generic non-neural network specific sweep
@@ -682,10 +639,7 @@ if __name__ == "__main__":
         #Create a table to show the best parameters for each agent
         i = 0
         for agent in best_agent_results.keys():
-            #print(agent)
-            #print(best_agent_results[agent].data)
             episodes = [episode for episode in range(num_episodes)]
-            #print(best_agent_results[agent].params)
 
             save_results(best_agent_results[agent].data, agent, RESULTS_FILE_NAME)
 
@@ -699,9 +653,6 @@ if __name__ == "__main__":
         setup_plot()
         do_plotting(filename=RESULTS_FILE_NAME)
 
-        #print('param setting results pre merge')
-        #print(param_setting_results)
-
         #Merge the relevant regular and auxiliary agent parameter settings results so that we can compare them on the same tables
         reg_agent_param_settings = list(product(alpha_params, gamma_params))
         for reg_agent_params in reg_agent_param_settings:
@@ -712,21 +663,11 @@ if __name__ == "__main__":
 
         #Create a table for each parameter setting, showing all agents per setting
         file_name_suffix = 1
-        #print('param setting results post merge')
-        #print(param_setting_results)
         for param_setting in param_setting_results:
             plt.clf()
             cur_param_setting_result = param_setting_results[param_setting]
             i = 0
-            #print('param setting')
-            #print(param_setting)
-            #print('param setting keys')
-            #print(cur_param_setting_result.keys())
             for agent in cur_param_setting_result.keys():
-
-                #print('param setting data')
-                #print(cur_param_setting_result[agent].data)
-
                 save_results(cur_param_setting_result[agent].data, agent, ''.join([RESULTS_FILE_NAME, str(file_name_suffix)]))
                 episodes = [episode for episode in range(num_episodes)]
                 if agent in AUX_AGENTS:

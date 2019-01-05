@@ -46,26 +46,9 @@ def create_truncated_model(trained_model):
         shared_1 = Dense(a_globs.NUM_NERONS_LAYER_1, activation='relu', name='shared_1')(main_input)
         main_task_full_layer = Dense(a_globs.NUM_NERONS_LAYER_2, activation='relu', name='main_task_full_layer')(shared_1)
         model = Model(inputs=main_input, outputs=main_task_full_layer)
-    #print('truncated layers')
-    #print(model.layers)
-
-    #print('non truncated layers')
-    #print(trained_model.layers)
 
     model.compile(loss='mse', optimizer=optimizer_map[a_globs.OPTIMIZER])
     for i, layer in enumerate(model.layers):
-        print('layer')
-        print(i)
-        print('trained model input')
-        print(trained_model.layers[i].input_shape)
-        print('trained odle output')
-        print(trained_model.layers[i].output_shape)
-
-        print('model shape input')
-        print(model.layers[i].input_shape)
-        print('model output shape')
-        print(model.layers[i].output_shape)
-
         layer.set_weights(trained_model.layers[i].get_weights())
     return model
 
@@ -108,21 +91,8 @@ def compute_CCA_discrete(model_snapshots, diff_network):
                 trained_layer_representations[:, i] = trained_layer_features
                 i += 1
 
-        #print(cur_layer_representations.shape)
         cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
-        #print(cca_results)
-        # print('Neuron coefficients')
-        # print('1')
-        # print(x['neuron_coeffs1'])
-        # print('2')
-        #print(x['neuron_coeffs2'])
-        # print('cca coefficients')
-        # print('1')
-        # print(cca_results['cca_coef1'])
-        # print('2')
-        # print(cca_results['cca_coef2'])
-        # print('cca directions')
-        # print(x['cca_dirns1'])
+
         if len(cca_results['cca_coef1']) > len(cca_results['cca_coef2']):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
         else:
@@ -172,31 +142,13 @@ def compute_CCA_continuous(plot_range, model_snapshots, diff_network):
                 trained_layer_representations[:, i] = trained_layer_features
                 i += 1
 
-        print('cur layer reps')
-        print(cur_layer_representations)
-        print('trained reps')
-        print(trained_layer_representations)
-        #print(cur_layer_representations.shape)
         cca_results = get_cca_similarity(cur_layer_representations, trained_layer_representations)
-        # print(cca_results)
-        # print('Neuron coefficients')
-        # print('1')
-        # print(x['neuron_coeffs1'])
-        # print('2')
-        #print(x['neuron_coeffs2'])
-        # print('cca coefficients')
-        # print('1')
-        # print(cca_results['cca_coef1'])
-        # print('2')
-        # print(cca_results['cca_coef2'])
-        # print('cca directions')
-        # print(x['cca_dirns1'])
+
         if len(cca_results['cca_coef1']) > len(cca_results['cca_coef2']):
             mean_similarity_scores.append(np.mean(cca_results['cca_coef2']))
         else:
             mean_similarity_scores.append(np.mean(cca_results['cca_coef1']))
-    # print('mean_similarity scores')
-    # print(mean_similarity_scores)
+
     return mean_similarity_scores, cca_results['neuron_coeffs2']
 
 
@@ -211,7 +163,7 @@ def compute_t_SNE_discrete():
     max_y_val = e_globs.MAX_ROW + 1
 
     hidden_layer_feature_shape = truncated_model.predict(format_states([[0, 0]])).shape
-    #print(hidden_layer_feature_shape)
+
     state_network_representations = np.empty((max_x_val * max_y_val, hidden_layer_feature_shape[1]))
 
     #Compute the last hidden layer state representation for each state
@@ -239,29 +191,9 @@ def compute_t_SNE_discrete():
             hidden_layer_features = truncated_model.predict(cur_state_formatted, batch_size=1)
             state_network_representations[i] = hidden_layer_features
             i += 1
-            #x_values.append(x)
-            #print('y value shape')
-            #print(y_values.shape)
-            #y_values.append(y)
-            #y_values[0][y] = y
-            # print(best_action_val)
-            # print(plot_values)
-            # print('x_values')
-            # print(x_values)
-            # print('y_values')
-            # print(y_values)
-            # print('plot_values')
-            # print(plot_values)
-        #x_values[0][x] = x
 
-    #Perform dimensionality reduction
-    # print(state_network_representations.shape)
-    # print(state_network_representations)
     tsne = TSNE(n_components=2, verbose=1)
     tsne_results = tsne.fit_transform(state_network_representations)
-    #print(tsne_results)
-    # print(tsne_results.shape)
-    #print(tsne_results[:, 0])
 
     return tsne_results, marker_sizes, marker_colours, marker_styles
 
@@ -318,35 +250,13 @@ def compute_t_SNE_continuous(plot_range):
                 marker_sizes.append(NORMAL_POINT)
                 cur_state = [scaled_y, scaled_x]
             cur_state_formatted = format_states([cur_state])
-            #print(cur_state_formatted)
-            #print(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             marker_colours.append(max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0])
             hidden_layer_features = truncated_model.predict(cur_state_formatted)
             state_network_representations[i] = hidden_layer_features
             i += 1
-            #x_values.append(x)
-            #print('y value shape')
-            #print(y_values.shape)
-            #y_values.append(y)
-            #y_values[0][y] = y
-            # print(best_action_val)
-            # print(plot_values)
-            # print('x_values')
-            # print(x_values)
-            # print('y_values')
-            # print(y_values)
-            # print('plot_values')
-            # print(plot_values)
-        #x_values[0][x] = x
 
-    #Perform dimensionality reduction
-    # print(state_network_representations.shape)
-    # print(state_network_representations)
     tsne = TSNE(n_components=2, verbose=1)
     tsne_results = tsne.fit_transform(state_network_representations)
-    #print(tsne_results)
-    # print(tsne_results.shape)
-    #print(tsne_results[:, 0])
 
     return tsne_results, marker_sizes, marker_colours, marker_styles
 
@@ -361,9 +271,7 @@ def compute_state_action_values_discrete():
     y_values = np.empty((1, max_y_val))
 
     plot_values = np.empty((max_x_val, max_y_val))
-    # print(a_globs.AGENT)
-    # print('plot shape')
-    # print(plot_values.shape)
+
     for x in range(max_x_val):
         for y in range(max_y_val):
             #State formatters expect a list of states in [row, column] format
@@ -382,20 +290,8 @@ def compute_state_action_values_discrete():
                 else:
                     best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1)[0][0])
 
-            #x_values.append(x)
-            #print('y value shape')
-            #print(y_values.shape)
-            #y_values.append(y)
             y_values[0][y] = y
-            # print(best_action_val)
-            # print(plot_values)
             plot_values[x][y] = best_action_val
-            # print('x_values')
-            # print(x_values)
-            # print('y_values')
-            # print(y_values)
-            # print('plot_values')
-            # print(plot_values)
         x_values[0][x] = x
     return x_values, np.transpose(y_values), np.transpose(plot_values)
 
@@ -408,46 +304,22 @@ def compute_state_action_values_continuous(plot_range):
     plot_values = np.empty((plot_range, plot_range))
 
     for x in range(plot_range):
-        # print('min column')
-        # print(cont_e_globs.MIN_COLUMN)
-        # print('max column')
-        # print(cont_e_globs.MAX_COLUMN)
-        # print('x')
-        # print(x)
         scaled_x = cont_e_globs.MIN_COLUMN + (x * (cont_e_globs.MAX_COLUMN - cont_e_globs.MIN_COLUMN) / plot_range)
-        #print('scaled x')
-        #print(scaled_x)
         for y in range(plot_range):
             scaled_y = cont_e_globs.MIN_ROW + (y * (cont_e_globs.MAX_ROW - cont_e_globs.MIN_ROW) / plot_range)
             cur_state = [scaled_y, scaled_x]
-            #cur_state = [y, x]
             if a_globs.AGENT == a_globs.RANDOM:
                 pass
             elif a_globs.AGENT == a_globs.SARSA_LAMBDA:
                 best_action_val = -max([approx_value(cur_state, action, a_globs.weights)[0] for action in range(a_globs.NUM_ACTIONS)])
             else:
                 cur_state_formatted = format_states([cur_state])
-                #print(cur_state_formatted)
                 if a_globs.AGENT == a_globs.NEURAL:
                     best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1))[0]
                 else:
                     best_action_val = -max(a_globs.model.predict(cur_state_formatted, batch_size=1)[0][0])
-                #print(best_action_val)
-
-            #x_values.append(x)
-            #print('y value shape')
-            #print(y_values.shape)
-            #y_values.append(y)
             y_values[0][y] = scaled_y
-            # print(best_action_val)
-            # print(plot_values)
             plot_values[x][y] = best_action_val
-            # print('x_values')
-            # print(x_values)
-            # print('y_values')
-            # print(y_values)
-            # print('plot_values')
-            # print(plot_values)
         x_values[0][x] = scaled_x
     return x_values, np.transpose(y_values), np.transpose(plot_values)
 
@@ -559,55 +431,25 @@ def do_auxiliary_learning(cur_state, next_state, reward):
     #Check and see if the relevant buffer is non-empty
     if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE) and not a_globs.is_trial_episode:
 
-        #print('I am replay buffer!')
         #Create the target training batch
-        # print('aux target')
-        # print(aux_target)
-        # print('shape')
-        # print(aux_target.shape)
         batch_inputs = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.FEATURE_VECTOR_SIZE,))
         batch_targets = np.empty(shape=(a_globs.BATCH_SIZE, a_globs.NUM_ACTIONS))
         batch_aux_targets = np.empty(shape=(a_globs.BATCH_SIZE, aux_target.shape[1]))
-
-        # print('batch aux targets')
-        # print(batch_aux_targets)
-        #
-        # print('aux target 0')
-        # print(aux_target[0])
-        #
-        # print('batch aux tagrets at 0')
-        # print(batch_aux_targets[0])
 
         #Add the current observation to the mini-batch
         batch_inputs[0] = cur_state_formatted
         batch_targets[0] = q_vals
         batch_aux_targets[0] = aux_target[0]
 
-        # print('post assignment of batch aux target')
-        # print(batch_aux_targets[0])
-
         #Use the replay buffer to learn from previously visited states
         for i in range(1, a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
-            # print('states')
-            # print(cur_observation.states)
-            # print('actions')
-            # print(cur_observation.actions)
-            # print('reward')
-            # print(cur_observation.reward)
-            # print('next state')
-            # print(cur_observation.next_state)
 
             #NOTE: For now If N > 1 we only want the most recent state associated
             #with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
             most_recent_obs_state = cur_observation.states[-1]
             sampled_state_formatted = format_states([most_recent_obs_state])
             sampled_next_state_formatted = format_states([cur_observation.next_state])
-
-            # print('sampled_state_formatted')
-            # print(sampled_state_formatted)
-            # print('sample state next formatted')
-            # print(sampled_next_state_formatted)
 
             #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
             q_vals = get_q_vals_aux(cur_observation.next_state, True)
@@ -630,36 +472,16 @@ def do_auxiliary_learning(cur_state, next_state, reward):
                 aux_target = np.array([rand_un() for _ in range(a_globs.NUM_NOISE_NODES)]).reshape(1, a_globs.NUM_NOISE_NODES)
             elif a_globs.AGENT == a_globs.REDUNDANT:
                 nested_target = [q_vals for _ in range(a_globs.NUM_REDUNDANT_TASKS)]
-                #print('nested_target')
-                #print(nested_target)
                 aux_target = np.array([item for sublist in nested_target for item in sublist]).reshape(1, a_globs.NUM_ACTIONS * a_globs.NUM_REDUNDANT_TASKS)
-
-            #print('batch inpiuts')
-            #print(batch_inputs)
-            # print('sampled_state_formatted')
-            # print(sampled_state_formatted)
-            # print('q vals')
-            # print(q_vals)
 
             #print(i)
             batch_inputs[i] = sampled_state_formatted
             batch_targets[i] = q_vals
             batch_aux_targets[i] = aux_target[0]
 
-        # print('Fit ME')
-        # print('batch inputs')
-        # print(batch_inputs)
-        # print('batch targets')
-        # print(batch_targets)
 
         #Update the weights using the sampled batch
-        # print('inputs')
-        # print(batch_inputs)
-        # print('targets')
-        # print(batch_targets)
-        # print('batch aux taergets')
-        # print(batch_aux_targets)
-        #a_globs.model.fit(batch_inputs, [batch_targets, batch_aux_targets], batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
+        a_globs.model.fit(batch_inputs, [batch_targets, batch_aux_targets], batch_size=a_globs.BATCH_SIZE , epochs=1, verbose=0)
 
 def update_replay_buffer(cur_state, cur_action, reward, next_state):
     """
@@ -672,17 +494,12 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
     a_globs.cur_context.append(cur_state)
     a_globs.cur_context_actions.append(cur_action)
     if len(a_globs.cur_context) == a_globs.N or a_globs.AGENT == a_globs.NEURAL:
-        #print('update buffer!')
 
-        #print('before pop')
-        #print(a_globs.cur_context)
         cur_observation = construct_observation(a_globs.cur_context, a_globs.cur_context_actions, reward, next_state)
 
         #Remove the oldest states from the context, to allow new ones to be added in a sliding window style
         a_globs.cur_context.pop(0)
         a_globs.cur_context_actions.pop(0)
-        #print('after pop')
-        #print(a_globs.cur_context)
 
         if a_globs.AGENT == a_globs.NEURAL:
                 add_to_buffer(a_globs.generic_buffer, cur_observation)
@@ -705,15 +522,10 @@ def update_replay_buffer(cur_state, cur_action, reward, next_state):
         else:
             exit("ERROR: Invalid agent specified! No corresponding buffer to use!")
 
-#NOTE: THIS USES NAMED TUPLE WRONG. WE NEED TO TREAT THE RESULT OF NAMED TUPLE AS A FACTORY AND CREATE INSTANCES FROM THE FACTORY
 def construct_observation(cur_states, cur_actions, reward, next_state):
     "Construct the observation used by the auxiliary tasks"
 
     cur_observation = Transition(list(cur_states), list(cur_actions), reward, next_state)
-    # cur_observation.states = list(cur_states)
-    # cur_observation.actions = list(cur_actions)
-    # cur_observation.reward = reward
-    # cur_observation.next_state = next_state
 
     return cur_observation
 
@@ -749,8 +561,6 @@ def buffers_are_ready(buffer_container, buffer_size):
     "Return whether all of the buffers in buffer_container are non empty and that their sum adds up to buffer_size"
     cur_buffer_size = 0
     for sub_buffer in buffer_container:
-        #print('I am ')
-        #print(sub_buffer)
         if not sub_buffer:
             return False
         cur_buffer_size += len(sub_buffer)
@@ -767,15 +577,7 @@ def sample_from_buffers(buffer_one, buffer_two=None):
         cur_observation = buffer_one[rand_in_range(len(buffer_one))]
     else:
         cur_observation = buffer_two[rand_in_range(len(buffer_two))]
-    # print('buffer 1')
-    # print(len(buffer_one))
-    # print('buffer 2')
-    # print(len(buffer_two))
-    # print('cur obs')
-    # print(cur_observation.states)
-    # print(cur_observation.actions)
-    # print(cur_observation.reward)
-    # print(cur_observation.next_state)
+
     return cur_observation
 
 def format_states(states):
@@ -829,8 +631,6 @@ def coordinate_states_encoding(states):
     """
 
     #flatten the states list
-    #[item for sublist in l for item in sublist]
-    #print(a_globs.FEATURE_VECTOR_SIZE)
     states = [coordinate for state in states for coordinate in state]
     formatted_states = np.array(states).reshape(1, a_globs.FEATURE_VECTOR_SIZE)
 
