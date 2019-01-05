@@ -420,6 +420,8 @@ if __name__ == "__main__":
     parser.add_argument('-correlate', nargs='?', type=str, help='Compute the pearson and spearman correlation coefficients of the provided data files. The files must be present in the Results directory and are specified with a single string, with spaces acting as delimiter between files.')
     parser.add_argument('--similarity', action='store_true', help='Whether or not to plot with a scale from 0 to 1.0, for use with the similarity measure.')
     parser.add_argument('--diff_network', action='store_true', help='Whether or not the layers being computed for SVCCA are from the same network')
+    parser.add_argument('-actions', nargs='?', type=int, default=4, help='The number of moves considered valid for the agent must be 4, 8, or 9. This only applies to the windy gridwordl experiment. Default value is actions = 4. This is currently disabled.')
+    parser.add_argument('--windy', action='store_true', help='Specify whether to use the windy gridworld environment. This is currently disabled as no envionrment file is present.')
 
     args = parser.parse_args()
 
