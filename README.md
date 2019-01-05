@@ -10,4 +10,6 @@ To run
 
 from the Gridworld directory run: python grid_exp.py args
 
+Inspecting grid_exp.py will allow one to get a quick overview of the various arguments available to run different experiments.
+
 
