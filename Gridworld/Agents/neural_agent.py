@@ -60,60 +60,29 @@ def agent_init():
 
 def agent_start(state):
 
-    # print("weights at episode start")
-    # #print(a_globs.model.get_weights())
-    # layers = a_globs.model.layers
-    # print('model layersl: list of keras layers')
-    # print(layers)
-    # print('first layer weights: list of numpy arrays')
-    # print(layers[0].get_weights())
-    # print('layer weights 1: numpy array')
-    # print(layers[0].get_weights()[0])
-    # print('layer 1 weights shape')
-    # print(layers[0].get_weights()[0].shape)
-    # print('layer 1 neron 1 weights')
-    # print(layers[0].get_weights()[0][0])
-    # print('layer weights 2: numpy array')
-    # print(layers[0].get_weights()[1])
-
     #Context is a sliding window of the previous n states that gets added to the replay buffer used by auxiliary tasks
-    # print("Num steps at start")
-    # print(RL_num_steps())
     a_globs.cur_context = []
     a_globs.cur_context_actions = []
     a_globs.cur_state = state
-    #print('STARTE STATE')
-    #print(state)
 
     if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         a_globs.cur_action = get_max_action(a_globs.cur_state)
-        #if a_globs.is_trial_episode:
-        #    print('Q step!')
-        #    pass
     else:
         a_globs.cur_action = rand_in_range(a_globs.NUM_ACTIONS)
     return a_globs.cur_action
 
 def agent_step(reward, state):
 
-    #print('Agent step')
-    #print(RL_num_steps())
-    #print('CUR STATE')
-    #print(state)
     next_state = state
     next_state_formatted = format_states([next_state])
     if not a_globs.is_trial_episode:
         update_replay_buffer(a_globs.cur_state, a_globs.cur_action, reward, next_state)
 
     #Choose the next action, epsilon greedy style
-    #print(a_globs.cur_epsilon)
     if rand_un() < 1 - a_globs.cur_epsilon or a_globs.is_trial_episode:
         #Get the best action over all actions possible in the next state, max_a(Q(s + 1), a))
         q_vals = a_globs.model.predict(next_state_formatted, batch_size=1)
         next_action = np.argmax(q_vals)
-        # if a_globs.is_trial_episode:
-        #    print('Q step!')
-        #    pass
     else:
         next_action = rand_in_range(a_globs.NUM_ACTIONS)
 
@@ -127,25 +96,7 @@ def agent_step(reward, state):
     cur_state_formatted = format_states([a_globs.cur_state])
     q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
 
-
-    # print('cur state')
-    # print(a_globs.cur_state)
-    # print('q vals')
-    # print(q_vals)
-    # print('next state')
-    # print(state)
-    # print('next action')
-    # print(next_action)
     q_vals[0][a_globs.cur_action] = cur_action_target
-
-
-    #Update the weights
-    # print('single update')
-    # print('input')
-    # print(cur_state_formatted)
-    # print('target')
-    # print(q_vals)
-    #a_globs.model.fit(cur_state_formatted, q_vals, batch_size=1, epochs=1, verbose=0)
 
     #Check and see if the relevant buffer is non-empty
     if buffers_are_ready(a_globs.buffer_container, a_globs.BUFFER_SIZE) and not a_globs.is_trial_episode:
@@ -167,50 +118,22 @@ def agent_step(reward, state):
         for i in range(1, a_globs.BATCH_SIZE):
             cur_observation = do_buffer_sampling()
 
-            # print('cur transition')
-            # print('states')
-            # print(cur_observation.states)
-            # print('actions')
-            # print(cur_observation.actions)
-            # print('reward')
-            # print(cur_observation.reward)
-            # print('next state')
-            # print(cur_observation.next_state)
             #NOTE: For now If N > 1 we only want the most recent state associated with the reward and next state (effectively setting N > 1 changes nothing right now since we want to use the same input type as in the regular singel task case)
 
             most_recent_obs_state = cur_observation.states[-1]
             sampled_state_formatted = format_states([most_recent_obs_state])
             sampled_next_state_formatted = format_states([cur_observation.next_state])
 
-            # print('sampled_state_formatted')
-            # print(sampled_state_formatted)
-            # print('sample state next formatted')
-            # print(sampled_next_state_formatted)
-
             #Get the best action over all actions possible in the next state, ie max_a(Q(s + 1), a))
             q_vals = a_globs.target_network.predict(sampled_next_state_formatted, batch_size=1)
-            # print('reward of target')
-            # print(reward)
-            # print('state value of target')
-            # print(np.max(q_vals))
             cur_action_target = reward + (a_globs.GAMMA * np.max(q_vals))
 
             #Get the q_vals to adjust the learning target for the current action taken
             q_vals = a_globs.model.predict(sampled_state_formatted, batch_size=1)
             q_vals[0][a_globs.cur_action] = cur_action_target
 
-            # print('sampled_state_formatted')
-            # print(sampled_state_formatted)
-            # print('q vals')
-            # print(q_vals)
             batch_inputs[i] = sampled_state_formatted
             batch_targets[i] = q_vals
-
-        # print('Fit ME')
-        # print('batch inputs')
-        # print(batch_inputs)
-        # print('batch targets')
-        # print(batch_targets)
 
         #Update the weights using the sampled batch
         if not a_globs.is_trial_episode:
@@ -218,40 +141,7 @@ def agent_step(reward, state):
 
 
     if RL_num_steps() % a_globs.NUM_STEPS_TO_UPDATE == 0 and not a_globs.is_trial_episode:
-        #print("Updating the target network at time step {} on episode {}".format(str(RL_num_steps()), str(RL_num_episodes())))
-        #print("Weights before update")
-        #print(a_globs.target_network.get_weights())
-        #layers = a_globs.target_network.layers
-        # print('target network layersl: list of keras layers')
-        # print(layers)
-        # print('first layer weights: list of numpy arrays')
-        # print(layers[0].get_weights())
-        # print('layer weights 1: numpy array')
-        # print(layers[0].get_weights()[0])
-        # print('layer 1 weights shape')
-        # print(layers[0].get_weights()[0].shape)
-        # print('layer 1 neron 1 weights')
-        # print(layers[0].get_weights()[0][0])
-        # print('layer weights 2: numpy array')
-        # print(layers[0].get_weights()[1])
-
-
-        #old_target_layer_1_weights = layers[0].get_weights()[1]
         update_target_network()
-        #new_target_layer_1_weights = layers[0].get_weights()[1]
-
-        # if any(old_target_layer_1_weights != new_target_layer_1_weights):
-        #     print('Target weights changed at episode {}'.format(RL_num_episodes()))
-        # else:
-        #     print('No change to the target weights at episode {}'.format(str(RL_num_episodes())))
-
-        # print('Weights after update')
-        # print(a_globs.target_network.get_weights())
-    else:
-        pass
-        #print('No target update at step {} of episode {}'.format(str(RL_num_steps()), str(RL_num_episodes())))
-        #print('current w')
-        #print(a_globs.target_network.get_weights())
 
 
     a_globs.cur_state = next_state
@@ -262,9 +152,6 @@ def agent_end(reward):
 
     #Update the network weights
     if not a_globs.is_trial_episode:
-        if (a_globs.is_trial_episode):
-            exit("BAD!")
-        print('GOAL')
         cur_state_formatted = format_states([a_globs.cur_state])
         q_vals = a_globs.model.predict(cur_state_formatted, batch_size=1)
         q_vals[0][a_globs.cur_action] = reward
